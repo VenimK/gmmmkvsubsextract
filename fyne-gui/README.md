@@ -4,9 +4,14 @@ A GUI application for extracting and converting PGS subtitles from MKV files to 
 
 ## Features
 
+- User-friendly graphical interface
 - Extract subtitle tracks from MKV files
 - Convert PGS/SUP subtitles to SRT format using OCR
-- Real-time progress indication with elapsed time
+- Enhanced progress reporting:
+  - Detailed progress bar showing percentage complete
+  - Real-time frame processing status
+  - Elapsed time tracking
+  - Estimated time remaining calculation
 - Detailed logging for troubleshooting
 - Cross-platform support (macOS, Windows, Linux)
 - Automatic dependency checking at startup

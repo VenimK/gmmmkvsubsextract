@@ -9,7 +9,9 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
+	"sync"
 	"time"
 	
 	"fyne.io/fyne/v2"
@@ -428,27 +430,77 @@ func main() {
 					
 					if err == nil {
 						// Debug point after successful extraction
-						// Create a progress spinner for the conversion process
-						conversionSpinner := widget.NewProgressBarInfinite()
+						// Create a detailed progress bar for the conversion process
+						conversionProgress := widget.NewProgressBar()
+						conversionProgress.Min = 0
+						conversionProgress.Max = 100 // Percentage-based progress
+						conversionProgress.SetValue(0)
+						
 						conversionLabel := widget.NewLabel("Converting PGS to SRT...")
+						statusLabel := widget.NewLabel("Initializing OCR process...")
 						elapsedLabel := widget.NewLabel("Elapsed: 0s")
+						remainingLabel := widget.NewLabel("Estimated time remaining: calculating...")
 						
-						// Track conversion start time
+						// Track conversion start time and progress data
 						conversionStartTime := time.Now()
+						var progressMutex sync.Mutex
+						var progressData = struct {
+							currentFrame int
+							totalFrames  int
+							frameRate    float64 // frames processed per second
+							lastUpdate   time.Time
+						}{
+							currentFrame: 0,
+							totalFrames:  0, // Will be updated when we parse output
+							frameRate:    0,
+							lastUpdate:   time.Now(),
+						}
 						
-						// Create a ticker to update elapsed time - use 500ms for smoother updates
+						// Create a ticker to update elapsed time and estimated remaining time
 						ticker := time.NewTicker(500 * time.Millisecond)
 						go func() {
 							defer ticker.Stop()
-							var lastText string
+							var lastElapsedText, lastRemainingText string
+							
 							for range ticker.C {
 								elapsed := time.Since(conversionStartTime).Round(time.Second)
-								newText := fmt.Sprintf("Elapsed: %s", elapsed)
+								newElapsedText := fmt.Sprintf("Elapsed: %s", elapsed)
+								
+								// Calculate estimated time remaining
+								progressMutex.Lock()
+								currentFrame := progressData.currentFrame
+								totalFrames := progressData.totalFrames
+								frameRate := progressData.frameRate
+								progressMutex.Unlock()
+								
+								var newRemainingText string
+								var progressValue float64
+								
+								if totalFrames > 0 && currentFrame > 0 && frameRate > 0 {
+									// Calculate percentage complete
+									progressValue = float64(currentFrame) / float64(totalFrames) * 100
+									
+									// Calculate remaining time
+									framesRemaining := totalFrames - currentFrame
+									secondsRemaining := float64(framesRemaining) / frameRate
+									remaining := time.Duration(secondsRemaining * float64(time.Second))
+									remaining = remaining.Round(time.Second)
+									
+									newRemainingText = fmt.Sprintf("Estimated time remaining: %s", remaining)
+								} else {
+									newRemainingText = "Estimated time remaining: calculating..."
+									progressValue = 0
+								}
+								
 								// Only update UI if text has changed to reduce UI operations
-								if newText != lastText {
-									lastText = newText
+								if newElapsedText != lastElapsedText || newRemainingText != lastRemainingText {
+									lastElapsedText = newElapsedText
+									lastRemainingText = newRemainingText
+									
 									fyne.Do(func() {
-										elapsedLabel.SetText(newText)
+										elapsedLabel.SetText(newElapsedText)
+										remainingLabel.SetText(newRemainingText)
+										conversionProgress.SetValue(progressValue)
 									})
 								}
 							}
@@ -457,13 +509,18 @@ func main() {
 						fyne.Do(func() {
 							result.SetText(result.Text + "\n\n[DEBUG] PGS extraction completed successfully, starting conversion process")
 							
-							// Show the conversion spinner and label
+							// Show the conversion progress bar and labels
 							currentTrackLabel.SetText("Converting PGS to SRT...")
 							progress.Hide()
 							trackList.Add(container.NewVBox(
 								conversionLabel,
-								conversionSpinner,
-								elapsedLabel,
+								statusLabel,
+								conversionProgress,
+								container.NewHBox(
+									elapsedLabel,
+									widget.NewLabel("|"),
+									remainingLabel,
+								),
 							))
 							trackList.Refresh()
 						})
@@ -628,12 +685,65 @@ func main() {
 								stderrWriter = &outputBuffer
 							}
 							
+							// Regular expressions to extract progress information from the output
+							frameProgressRegex := regexp.MustCompile(`Processing frame (\d+)/(\d+)`)
+							statusUpdateRegex := regexp.MustCompile(`Status: (.+)`)
+							
 							// Copy stdout and stderr to the writers in a buffered way to reduce UI updates
 							go func() {
 								bufReader := bufio.NewReaderSize(stdoutPipe, 4096) // Use larger buffer
 								scanner := bufio.NewScanner(bufReader)
 								for scanner.Scan() {
 									line := scanner.Text() + "\n"
+									
+									// Check for progress information in the output
+									if matches := frameProgressRegex.FindStringSubmatch(line); len(matches) == 3 {
+										// Extract current frame and total frames
+										currentFrame := 0
+										totalFrames := 0
+										fmt.Sscanf(matches[1], "%d", &currentFrame)
+										fmt.Sscanf(matches[2], "%d", &totalFrames)
+										
+										progressMutex.Lock()
+										// Update progress data
+										if progressData.totalFrames == 0 {
+											progressData.totalFrames = totalFrames
+										}
+										
+										// Calculate frame rate
+										if progressData.currentFrame > 0 {
+											timeDiff := time.Since(progressData.lastUpdate).Seconds()
+											frameDiff := currentFrame - progressData.currentFrame
+											if timeDiff > 0 && frameDiff > 0 {
+												// Smooth the frame rate calculation with a weighted average
+												newFrameRate := float64(frameDiff) / timeDiff
+												if progressData.frameRate > 0 {
+													// 70% old rate, 30% new rate for smoother estimates
+													progressData.frameRate = progressData.frameRate*0.7 + newFrameRate*0.3
+												} else {
+													progressData.frameRate = newFrameRate
+												}
+											}
+										}
+										
+										progressData.currentFrame = currentFrame
+										progressData.lastUpdate = time.Now()
+										progressMutex.Unlock()
+										
+										// Update status label
+										percentComplete := float64(currentFrame) / float64(totalFrames) * 100
+										fyne.Do(func() {
+											statusLabel.SetText(fmt.Sprintf("Processing frame %d of %d (%.1f%%)", 
+												currentFrame, totalFrames, percentComplete))
+										})
+									} else if matches := statusUpdateRegex.FindStringSubmatch(line); len(matches) == 2 {
+										// Update status message
+										statusMsg := matches[1]
+										fyne.Do(func() {
+											statusLabel.SetText(statusMsg)
+										})
+									}
+									
 									if _, writeErr := stdoutWriter.Write([]byte(line)); writeErr != nil {
 										break
 									}
@@ -645,6 +755,24 @@ func main() {
 								scanner := bufio.NewScanner(bufReader)
 								for scanner.Scan() {
 									line := scanner.Text() + "\n"
+									
+									// Also check stderr for progress information
+									if matches := frameProgressRegex.FindStringSubmatch(line); len(matches) == 3 {
+										// Process frame progress from stderr (same as stdout handler)
+										currentFrame := 0
+										totalFrames := 0
+										fmt.Sscanf(matches[1], "%d", &currentFrame)
+										fmt.Sscanf(matches[2], "%d", &totalFrames)
+										
+										progressMutex.Lock()
+										// Update progress data
+										if progressData.totalFrames == 0 {
+											progressData.totalFrames = totalFrames
+										}
+										progressData.currentFrame = currentFrame
+										progressMutex.Unlock()
+									}
+									
 									if _, writeErr := stderrWriter.Write([]byte(line)); writeErr != nil {
 										break
 									}
