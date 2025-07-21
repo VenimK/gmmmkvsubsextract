@@ -1,6 +1,6 @@
-# GMM MKV Subtitles Extract
+# Subtitle Forge
 
-A GUI application for extracting and converting PGS subtitles from MKV files to SRT format.
+A powerful GUI application for extracting and converting subtitles from MKV files, with specialized support for transforming PGS subtitles to SRT format.
 
 ## Features
 

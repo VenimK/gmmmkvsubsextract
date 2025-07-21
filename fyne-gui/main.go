@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -18,6 +19,7 @@ import (
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
+	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/storage"
 	"fyne.io/fyne/v2/widget"
 )
@@ -1044,15 +1046,26 @@ func main() {
 		}()
 	})
 
+	// Create Support button
+	supportBtn := widget.NewButton("Support This Project", func() {
+		supportURL, _ := url.Parse("https://paypal.me/VenimK")
+		fyne.CurrentApp().OpenURL(supportURL)
+	})
+	supportBtn.Importance = widget.HighImportance
+	
 	// Create button row for better layout
-	buttonRow := container.NewHBox(loadTracksBtn, startExtractBtn)
+	buttonRow := container.NewHBox(loadTracksBtn, startExtractBtn, layout.NewSpacer(), supportBtn)
 
 	// Use app.NewWithID for better performance and to avoid preferences API warnings
 	// This was already set at the beginning of main()
 
 	// Use a more efficient layout with container.NewBorder for better performance
+	// Create app title with version
+	titleLabel := widget.NewLabel("Subtitle Forge v1.0")
+	titleLabel.TextStyle = fyne.TextStyle{Bold: true}
+	
 	topContent := container.NewVBox(
-		widget.NewLabel("Subtitle Forge"),
+		titleLabel,
 		fileBtn,
 		selectedFile,
 		dirBtn,
