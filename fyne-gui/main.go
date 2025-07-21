@@ -31,11 +31,37 @@ type TrackItem struct {
 	ConvertOCR *widget.Check // Option to convert PGS to SRT using OCR
 }
 
+// checkDependencies verifies if all required external tools are installed
+func checkDependencies() map[string]bool {
+	results := make(map[string]bool)
+	
+	// Check for mkvmerge
+	mkvmergeCmd := exec.Command("mkvmerge", "--version")
+	results["mkvmerge"] = mkvmergeCmd.Run() == nil
+	
+	// Check for mkvextract
+	mkvextractCmd := exec.Command("mkvextract", "--version")
+	results["mkvextract"] = mkvextractCmd.Run() == nil
+	
+	// Check for Deno
+	denoCmd := exec.Command("deno", "--version")
+	results["deno"] = denoCmd.Run() == nil
+	
+	// Check for Tesseract (optional, as it might be bundled with the script)
+	tesseractCmd := exec.Command("tesseract", "--version")
+	results["tesseract"] = tesseractCmd.Run() == nil
+	
+	return results
+}
+
 func main() {
 	trackList := container.NewVBox()
 	a := app.NewWithID("com.gmm.mkvsubsextract")
 	w := a.NewWindow("GMM MKV Subtitles Extract (Fyne)")
 	w.Resize(fyne.NewSize(800, 600))
+	
+	// Check dependencies at startup
+	dependencyResults := checkDependencies()
 
 	selectedFile := widget.NewLabel("No MKV file selected.")
 	selectedDir := widget.NewLabel("No output directory selected.")
@@ -46,6 +72,26 @@ func main() {
 	// Make the result area larger to show more debug information
 	resultScroll := container.NewScroll(result)
 	resultScroll.SetMinSize(fyne.NewSize(780, 200))
+	
+	// Display dependency check results
+	dependencyStatus := "System Dependency Check:\n"
+	allDependenciesInstalled := true
+	for tool, installed := range dependencyResults {
+		status := "✅ Installed"
+		if !installed {
+			status = "❌ Not found"
+			allDependenciesInstalled = false
+		}
+		dependencyStatus += fmt.Sprintf("- %s: %s\n", tool, status)
+	}
+	
+	if !allDependenciesInstalled {
+		dependencyStatus += "\n⚠️ Some required tools are missing. Please install them before using all features.\n"
+	} else {
+		dependencyStatus += "\n✅ All required tools are installed.\n"
+	}
+	
+	result.SetText(dependencyStatus)
 
 	progress := widget.NewProgressBar()
 	progress.Min = 0

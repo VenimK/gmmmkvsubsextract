@@ -9,6 +9,7 @@ A GUI application for extracting and converting PGS subtitles from MKV files to 
 - Real-time progress indication with elapsed time
 - Detailed logging for troubleshooting
 - Cross-platform support (macOS, Windows, Linux)
+- Automatic dependency checking at startup
 
 ## Requirements
 
@@ -67,9 +68,51 @@ For cross-compilation, you may need additional tools:
 
 ## Troubleshooting
 
+- The application automatically checks for required dependencies at startup
+- Missing dependencies will be clearly indicated in the application window
 - Ensure Deno and mkvmerge are in your PATH
 - Check the conversion logs in the output directory
 - For permission issues, try running the application with administrator privileges
+
+## PGS to SRT Conversion Process
+
+The application includes a powerful feature to convert PGS/SUP subtitle files (image-based subtitles) to SRT format (text-based subtitles) using Optical Character Recognition (OCR). This process involves several steps:
+
+### How It Works
+
+1. **Extraction**: First, the PGS subtitles are extracted from the MKV file using `mkvextract` as .sup files
+
+2. **OCR Processing**: The extracted .sup files are then processed using a Deno-based script that:
+   - Decodes the PGS/SUP format to extract individual subtitle frames
+   - Uses Tesseract OCR to convert the subtitle images to text
+   - Preserves timing information from the original subtitles
+   - Formats the output as a standard SRT file
+
+3. **Real-time Feedback**: During conversion, the application provides:
+   - Progress updates
+   - Elapsed time tracking
+   - Detailed logs of the conversion process
+
+### Requirements for OCR
+
+- **Deno Runtime**: Required to execute the conversion script
+- **Tesseract OCR**: The underlying OCR engine used for text recognition
+- **Tessdata Files**: Language training data for Tesseract (English data included by default)
+
+### Performance Considerations
+
+- OCR conversion is CPU-intensive and may take significant time for longer subtitle tracks
+- The quality of the OCR results depends on several factors:
+  - Resolution and clarity of the original PGS subtitles
+  - Font style used in the original subtitles
+  - Language of the subtitles (English works best with the default configuration)
+
+### Troubleshooting OCR Conversion
+
+- If conversion fails, check that Deno is properly installed and in your PATH
+- Verify that the Tesseract language data files are available
+- For poor OCR quality, you may need to adjust the conversion parameters in the script
+- The application creates detailed logs that can help diagnose conversion issues
 
 ## License
 
