@@ -1046,10 +1046,23 @@ func main() {
 		}()
 	})
 
-	// Create Support button
-	supportBtn := widget.NewButton("Support This Project", func() {
-		supportURL, _ := url.Parse("https://paypal.me/VenimK")
-		fyne.CurrentApp().OpenURL(supportURL)
+	// Create Support button with improved UX
+	supportBtn := widget.NewButton("Donate ☕", func() {
+		// Show a confirmation dialog with information about the donation
+		confirm := dialog.NewConfirm(
+			"Support Subtitle Forge",
+			"Your donation helps maintain and improve Subtitle Forge. Would you like to proceed to PayPal?",
+			func(ok bool) {
+				if ok {
+					supportURL, _ := url.Parse("https://paypal.me/VenimK")
+					fyne.CurrentApp().OpenURL(supportURL)
+				}
+			},
+			w,
+		)
+		confirm.SetDismissText("Cancel")
+		confirm.SetConfirmText("Donate")
+		confirm.Show()
 	})
 	supportBtn.Importance = widget.HighImportance
 	
