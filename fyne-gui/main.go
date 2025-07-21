@@ -59,8 +59,8 @@ func checkDependencies() map[string]bool {
 
 func main() {
 	trackList := container.NewVBox()
-	a := app.NewWithID("com.gmm.mkvsubsextract")
-	w := a.NewWindow("GMM MKV Subtitles Extract (Fyne)")
+	a := app.NewWithID("com.gmm.subtitleforge")
+	w := a.NewWindow("Subtitle Forge")
 	w.Resize(fyne.NewSize(800, 600))
 
 	// Check dependencies at startup

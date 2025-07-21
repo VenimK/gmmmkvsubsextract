@@ -1,4 +1,4 @@
-# GMM MKV Subtitles Extract
+# Subtitle Forge
 
 A tool for extracting and converting subtitles from MKV files, available in both command-line (CLI) and graphical user interface (GUI) versions.
 
