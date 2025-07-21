@@ -1052,7 +1052,7 @@ func main() {
 
 	// Use a more efficient layout with container.NewBorder for better performance
 	topContent := container.NewVBox(
-		widget.NewLabel("GMM MKV Subtitles Extract (Fyne)"),
+		widget.NewLabel("Subtitle Forge"),
 		fileBtn,
 		selectedFile,
 		dirBtn,
