@@ -22,6 +22,7 @@ This project provides two applications:
 - Real-time progress indication with elapsed time
 - Detailed logging for troubleshooting
 - Cross-platform support (macOS, Windows, Linux)
+- Automatic dependency checking at startup
 
 ## Requirements
 
@@ -85,9 +86,47 @@ This project provides two applications:
 ### CLI Version
 To extract subtitles from an MKV file, use the `-x` or `--extract` flag followed by the path to the MKV file:
 
-```sh
+## PGS to SRT Conversion Process
+
+The application includes a powerful feature to convert PGS/SUP subtitle files (image-based subtitles) to SRT format (text-based subtitles) using Optical Character Recognition (OCR). This process involves several steps:
+
+### How It Works
+
+1. **Extraction**: First, the PGS subtitles are extracted from the MKV file using `mkvextract` as .sup files
+
+2. **OCR Processing**: The extracted .sup files are then processed using a Deno-based script that:
+   - Decodes the PGS/SUP format to extract individual subtitle frames
+   - Uses Tesseract OCR to convert the subtitle images to text
+   - Preserves timing information from the original subtitles
+   - Formats the output as a standard SRT file
+
+3. **Real-time Feedback**: During conversion, the application provides:
+   - Progress updates
+   - Elapsed time tracking
+   - Detailed logs of the conversion process
+
+### Requirements for OCR
+
+- **Deno Runtime**: Required to execute the conversion script
+- **Tesseract OCR**: The underlying OCR engine used for text recognition
+- **Tessdata Files**: Language training data for Tesseract (English data included by default)
+
+### Performance Considerations
+
+- OCR conversion is CPU-intensive and may take significant time for longer subtitle tracks
+- The quality of the OCR results depends on several factors:
+  - Resolution and clarity of the original PGS subtitles
+  - Font style used in the original subtitles
+  - Language of the subtitles (English works best with the default configuration)
+
+### Troubleshooting OCR Conversion
+
+- If conversion fails, check that Deno is properly installed and in your PATH
+- Verify that the Tesseract language data files are available
+- For poor OCR quality, you may need to adjust the conversion parameters in the script
+- The application creates detailed logs that can help diagnose conversion issues
+
 ./gmmmkvsubsextract -x /path/to/yourfile.mkv
-```
 
 ### GUI Version
 1. Click "Select MKV File" to choose your MKV file
@@ -97,32 +136,31 @@ To extract subtitles from an MKV file, use the `-x` or `--extract` flag followed
 5. Click "Start Extract" to begin the process
 6. Monitor the progress in the application window
 
+## Building from Source
+
+### Prerequisites
+
+- Go 1.18 or later
+- Fyne dependencies: [Fyne Getting Started](https://developer.fyne.io/started/)
+
+### Build Steps
+
+1. Clone the repository
+2. Navigate to the `fyne-gui` directory
+3. Run the build script: `./build.sh`
+
+For cross-compilation, you may need additional tools:
+- For Windows builds on macOS: `brew install mingw-w64`
+- For Linux builds on macOS: `brew install FiloSottile/musl-cross/musl-cross`
+
 ## Troubleshooting
 
+- The application automatically checks for required dependencies at startup
+- Missing dependencies will be clearly indicated in the application window
 - Ensure Deno, mkvmerge, and mkvextract are in your PATH
 - Check the conversion logs in the output directory
 - For permission issues, try running the application with administrator privileges
 
-```sh
-./gmmmkvsubsextract -x example.mkv
-```
-
-This command will extract all subtitle tracks from `example.mkv` and save them with appropriate file names based on track properties.
-
-## Converting Subtitles
-
-If you need to convert the extracted subtitle files to other formats such as `.srt`, you can use online tools like [Subtitle Tools](https://subtitletools.com/). This website allows you to upload your subtitle files and convert them to various formats easily.
-
 ## License
 
-This project is licensed under the MIT License. See the `LICENSE.md` file for details.
-
-## Contributing
-
-Contributions are welcome! Please open an issue or submit a pull request on GitHub.
-
-## Acknowledgements
-
-- [MKVToolNix](https://mkvtoolnix.download/)
-- [gocmd](https://github.com/devfacet/gocmd)
-- [logrus](https://github.com/sirupsen/logrus)
+[MIT License](LICENSE)
