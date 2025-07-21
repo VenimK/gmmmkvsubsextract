@@ -4,12 +4,19 @@ A GUI application for extracting and converting PGS subtitles from MKV files to 
 
 ## Features
 
+- User-friendly graphical interface
 - Extract subtitle tracks from MKV files
 - Convert PGS/SUP subtitles to SRT format using OCR
-- Real-time progress indication with elapsed time
+- Enhanced progress reporting:
+  - Detailed progress bar showing percentage complete
+  - Real-time frame processing status
+  - Elapsed time tracking
+  - Estimated time remaining calculation
 - Detailed logging for troubleshooting
 - Cross-platform support (macOS, Windows, Linux)
 - Automatic dependency checking at startup
+- Drag-and-drop support for MKV files
+- Automatic output directory setting (defaults to MKV file location)
 
 ## Requirements
 
@@ -60,8 +67,11 @@ When running the application for the first time, macOS may display a security wa
 
 ## Usage
 
-1. Click "Select MKV File" to choose your MKV file
-2. Click "Select Output Directory" to choose where to save the extracted subtitles
+1. Load an MKV file using one of these methods:
+   - Click "Select MKV File" to choose your MKV file using the file dialog
+   - Or simply drag and drop an MKV file onto the application window
+2. The output directory is automatically set to the same location as your MKV file
+   - You can change it by clicking "Change Output Directory" if needed
 3. Click "Load Tracks" to see available subtitle tracks
 4. Select the subtitle tracks you want to extract/convert
 5. Click "Start Extract" to begin the process
