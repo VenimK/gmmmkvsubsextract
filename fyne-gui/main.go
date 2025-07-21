@@ -16,6 +16,7 @@ import (
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
+	"fyne.io/fyne/v2/storage"
 	"fyne.io/fyne/v2/widget"
 )
 
@@ -146,12 +147,25 @@ func main() {
 
 	// Button to select MKV file
 	fileBtn := widget.NewButton("Select MKV File (or Drag & Drop)", func() {
-		dialog.ShowFileOpen(func(file fyne.URIReadCloser, err error) {
+		// Create a file filter for MKV files
+		filter := storage.NewExtensionFileFilter([]string{".mkv"})
+		
+		// Use custom dialog with filter
+		fd := dialog.NewFileOpen(func(file fyne.URIReadCloser, err error) {
 			if err != nil || file == nil {
 				return
 			}
 			
-			mkvPath = file.URI().Path()
+			filePath := file.URI().Path()
+			fileExt := strings.ToLower(filepath.Ext(filePath))
+			
+			// Double-check that it's an MKV file
+			if fileExt != ".mkv" {
+				dialog.ShowError(fmt.Errorf("Please select an MKV file only."), w)
+				return
+			}
+			
+			mkvPath = filePath
 			selectedFile.SetText(mkvPath)
 			
 			// Set output directory to the same directory as the MKV file
@@ -165,6 +179,9 @@ func main() {
 			
 			result.SetText("MKV file loaded. Output directory automatically set to MKV location. Click 'Load Tracks' to analyze the MKV file.")
 		}, w)
+		
+		fd.SetFilter(filter)
+		fd.Show()
 	})
 
 	// Button to select output directory (optional, as it's auto-set)
