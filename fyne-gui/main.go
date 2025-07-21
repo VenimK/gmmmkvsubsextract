@@ -62,7 +62,11 @@ func main() {
 	
 	// Check dependencies at startup
 	dependencyResults := checkDependencies()
-
+	
+	var mkvPath string
+	var outDir string
+	var trackItems []*TrackItem
+	
 	selectedFile := widget.NewLabel("No MKV file selected.")
 	selectedDir := widget.NewLabel("No output directory selected.")
 	result := widget.NewMultiLineEntry()
@@ -72,6 +76,46 @@ func main() {
 	// Make the result area larger to show more debug information
 	resultScroll := container.NewScroll(result)
 	resultScroll.SetMinSize(fyne.NewSize(780, 200))
+	
+	// Set up file drop handling
+	w.Canvas().SetOnTypedKey(func(ke *fyne.KeyEvent) {
+		// Handle key events if needed
+	})
+	
+	w.SetOnDropped(func(pos fyne.Position, uris []fyne.URI) {
+		if len(uris) > 0 {
+			filePath := uris[0].Path()
+			fileExt := strings.ToLower(filepath.Ext(filePath))
+			
+			if fileExt == ".mkv" {
+				// Handle MKV file drop
+				mkvPath = filePath
+				a.SendNotification(&fyne.Notification{
+					Title:   "File Dropped",
+					Content: "MKV file loaded: " + filepath.Base(filePath),
+				})
+				
+				// Update UI
+				selectedFile.SetText(mkvPath)
+				
+				// Set output directory to the same directory as the MKV file
+				outDir = filepath.Dir(mkvPath)
+				selectedDir.SetText(outDir)
+				
+				// Clear previous tracks
+				trackItems = []*TrackItem{}
+				trackList.Objects = nil
+				trackList.Refresh()
+				
+				result.SetText("MKV file dropped and loaded. Output directory automatically set to MKV location. Click 'Load Tracks' to analyze the MKV file.")
+			} else {
+				a.SendNotification(&fyne.Notification{
+					Title:   "Invalid File",
+					Content: "Please drop an MKV file only.",
+				})
+			}
+		}
+	})
 	
 	// Display dependency check results
 	dependencyStatus := "System Dependency Check:\n"
@@ -99,36 +143,38 @@ func main() {
 	progress.SetValue(0)
 
 	currentTrackLabel := widget.NewLabel("")
-	trackItems := []*TrackItem{}
-
-	var mkvPath string
-	var outDir string
 
 	// Button to select MKV file
-	fileBtn := widget.NewButton("Select MKV File", func() {
+	fileBtn := widget.NewButton("Select MKV File (or Drag & Drop)", func() {
 		dialog.ShowFileOpen(func(file fyne.URIReadCloser, err error) {
 			if err != nil || file == nil {
 				return
 			}
+			
 			mkvPath = file.URI().Path()
 			selectedFile.SetText(mkvPath)
+			
+			// Set output directory to the same directory as the MKV file
+			outDir = filepath.Dir(mkvPath)
+			selectedDir.SetText(outDir)
 			
 			// Clear previous tracks
 			trackItems = []*TrackItem{}
 			trackList.Objects = nil
 			trackList.Refresh()
 			
-			result.SetText("File selected. Click 'Load Tracks' to analyze the MKV file.")
+			result.SetText("MKV file loaded. Output directory automatically set to MKV location. Click 'Load Tracks' to analyze the MKV file.")
 		}, w)
 	})
 
-	// Button to select output directory
-	dirBtn := widget.NewButton("Select Output Directory", func() {
-		dialog.ShowFolderOpen(func(list fyne.ListableURI, err error) {
-			if err != nil || list == nil {
+	// Button to select output directory (optional, as it's auto-set)
+	dirBtn := widget.NewButton("Change Output Directory", func() {
+		dialog.ShowFolderOpen(func(uri fyne.ListableURI, err error) {
+			if err != nil || uri == nil {
 				return
 			}
-			outDir = list.Path()
+			
+			outDir = uri.Path()
 			selectedDir.SetText(outDir)
 		}, w)
 	})
@@ -136,7 +182,7 @@ func main() {
 	// Button to load tracks from MKV file
 	loadTracksBtn := widget.NewButton("Load Tracks", func() {
 		if mkvPath == "" {
-			dialog.ShowError(fmt.Errorf("Please select an MKV file first."), w)
+			dialog.ShowError(fmt.Errorf("Please select or drag & drop an MKV file first."), w)
 			return
 		}
 		

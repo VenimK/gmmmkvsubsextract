@@ -25,6 +25,24 @@ A GUI application for extracting and converting PGS subtitles from MKV files to 
 3. Install MKVToolNix: `brew install mkvtoolnix`
 4. Run the application: `./gmmmkvsubsextract-mac`
 
+#### Handling Security Warnings
+
+When running the application for the first time, macOS may display a security warning: "Apple can't verify that this app is free from malware." This happens because the application isn't signed with an Apple Developer certificate. To bypass this:
+
+**Method 1: Using Finder**
+1. Locate the application in Finder
+2. Right-click (or Control-click) on the application
+3. Select "Open" from the context menu
+4. Click "Open" in the dialog that appears
+5. After doing this once, you can open the application normally in the future
+
+**Method 2: Using Terminal**
+1. Open Terminal
+2. Run: `xattr -d com.apple.quarantine /path/to/gmmmkvsubsextract-mac`
+3. Replace `/path/to/` with the actual path to the application
+
+**Note:** This warning appears because the application is not signed with an Apple Developer certificate, not because it contains malware.
+
 ### Windows
 
 1. Extract the `gmmmkvsubsextract-windows.zip` archive
