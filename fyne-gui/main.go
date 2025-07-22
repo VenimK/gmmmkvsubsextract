@@ -980,7 +980,7 @@ func main() {
 					// Normal extraction without conversion
 					// Use proper file extension based on codec
 					var fileExt string
-					
+
 					// Handle special case for "SubRip/SRT" format
 					if strings.Contains(t.Codec, "SubRip") || strings.Contains(t.Codec, "subrip") || strings.Contains(t.Codec, "SRT") || strings.Contains(t.Codec, "srt") {
 						fileExt = "srt"
@@ -998,28 +998,28 @@ func main() {
 						cleanCodec := strings.ReplaceAll(t.Codec, "/", "_")
 						fileExt = strings.ToLower(cleanCodec)
 					}
-					
+
 					// Debug output for file naming
 					fyne.Do(func() {
 						result.SetText(result.Text + "\n\n=== Track Extraction ===\n")
 						result.SetText(result.Text + fmt.Sprintf("Track: %d (%s - %s)\n", t.Num, t.Lang, t.Codec))
 					})
-					
+
 					outFile = fmt.Sprintf("%s.track%d_%s.%s", mkvBaseName, t.Num, t.Lang, fileExt)
-					
+
 					fyne.Do(func() {
 						result.SetText(result.Text + fmt.Sprintf("Output file: %s\n", outFile))
 					})
 					// Use absolute paths for all subtitle extractions to avoid directory creation issues
 					absOutFile := filepath.Join(outDir, outFile)
 					cmd := exec.Command("mkvextract", "tracks", mkvPath, fmt.Sprintf("%d:%s", t.Num, absOutFile))
-					
+
 					fyne.Do(func() {
 						result.SetText(result.Text + fmt.Sprintf("\nExtracting to: %s", absOutFile))
 					})
-					
+
 					output, err = cmd.CombinedOutput()
-					
+
 					// Set proper file permissions for subtitle files (read/write for user, read for group/others)
 					if err == nil {
 						outFilePath := filepath.Join(outDir, outFile)
@@ -1093,7 +1093,7 @@ func main() {
 		confirm.Show()
 	})
 	supportBtn.Importance = widget.HighImportance
-	
+
 	// Create button row for better layout
 	buttonRow := container.NewHBox(loadTracksBtn, startExtractBtn, layout.NewSpacer(), supportBtn)
 
@@ -1102,9 +1102,9 @@ func main() {
 
 	// Use a more efficient layout with container.NewBorder for better performance
 	// Create app title with version
-	titleLabel := widget.NewLabel("Subtitle Forge v1.0")
+	titleLabel := widget.NewLabel("Subtitle Forge v1.1")
 	titleLabel.TextStyle = fyne.TextStyle{Bold: true}
-	
+
 	topContent := container.NewVBox(
 		titleLabel,
 		fileBtn,
