@@ -1,4 +1,4 @@
-# Subtitle Forge
+# Subtitle Forge v1.1
 
 A powerful GUI application for extracting and converting subtitles from MKV files, with specialized support for transforming PGS subtitles to SRT format.
 
@@ -17,6 +17,8 @@ A powerful GUI application for extracting and converting subtitles from MKV file
 - Automatic dependency checking at startup
 - Drag-and-drop support for MKV files
 - Automatic output directory setting (defaults to MKV file location)
+- Support button for donations
+- Proper file permissions for extracted subtitle files
 
 ## Requirements
 
@@ -27,10 +29,10 @@ A powerful GUI application for extracting and converting subtitles from MKV file
 
 ### macOS
 
-1. Extract the `gmmmkvsubsextract-macos.tar.gz` archive
+1. Extract the `subtitle-forge-macos.tar.gz` archive
 2. Install Deno: `brew install deno`
 3. Install MKVToolNix: `brew install mkvtoolnix`
-4. Run the application: `./gmmmkvsubsextract-mac`
+4. Run the application: `./subtitle-forge-mac`
 
 #### Handling Security Warnings
 
@@ -45,25 +47,25 @@ When running the application for the first time, macOS may display a security wa
 
 **Method 2: Using Terminal**
 1. Open Terminal
-2. Run: `xattr -d com.apple.quarantine /path/to/gmmmkvsubsextract-mac`
+2. Run: `xattr -d com.apple.quarantine /path/to/subtitle-forge-mac`
 3. Replace `/path/to/` with the actual path to the application
 
 **Note:** This warning appears because the application is not signed with an Apple Developer certificate, not because it contains malware.
 
 ### Windows
 
-1. Extract the `gmmmkvsubsextract-windows.zip` archive
+1. Extract the `subtitle-forge-windows.zip` archive
 2. Install Deno: [Deno Installation](https://deno.land/#installation)
 3. Install MKVToolNix: [MKVToolNix Download](https://mkvtoolnix.download/downloads.html)
 4. Add both to your PATH environment variable
-5. Run the application by double-clicking `gmmmkvsubsextract.exe`
+5. Run the application by double-clicking `subtitle-forge.exe`
 
 ### Linux
 
-1. Extract the `gmmmkvsubsextract-linux.tar.gz` archive
+1. Extract the `subtitle-forge-linux.tar.gz` archive
 2. Install Deno: `curl -fsSL https://deno.land/x/install/install.sh | sh`
 3. Install MKVToolNix: Use your distribution's package manager (e.g., `apt install mkvtoolnix`)
-4. Run the application: `./gmmmkvsubsextract-linux`
+4. Run the application: `./subtitle-forge-linux`
 
 ## Usage
 

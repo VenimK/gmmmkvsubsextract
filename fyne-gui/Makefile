@@ -1,7 +1,7 @@
-# Makefile for GMM MKV Subtitles Extract
+# Makefile for Subtitle Forge
 
 # Variables
-APP_NAME = gmmmkvsubsextract
+APP_NAME = subtitle-forge
 BUILD_DIR = build
 SCRIPTS_DIR = ../scripts
 
