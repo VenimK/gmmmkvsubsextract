@@ -980,22 +980,44 @@ func main() {
 					// Normal extraction without conversion
 					// Use proper file extension based on codec
 					var fileExt string
-					if t.Codec == "hdmv_pgs_subtitle" || t.Codec == "HDMV PGS" {
-						fileExt = "sup"
-					} else if t.Codec == "subrip" || t.Codec == "SubRip" {
+					
+					// Handle special case for "SubRip/SRT" format
+					if strings.Contains(t.Codec, "SubRip") || strings.Contains(t.Codec, "subrip") || strings.Contains(t.Codec, "SRT") || strings.Contains(t.Codec, "srt") {
 						fileExt = "srt"
+						fyne.Do(func() {
+							result.SetText(result.Text + "\nDetected SRT format, using .srt extension")
+						})
+					} else if t.Codec == "hdmv_pgs_subtitle" || t.Codec == "HDMV PGS" {
+						fileExt = "sup"
 					} else if t.Codec == "ass" || t.Codec == "ssa" || t.Codec == "ASS" || t.Codec == "SSA" {
 						fileExt = "ass"
 					} else if t.Codec == "vobsub" || t.Codec == "VobSub" {
 						fileExt = "idx"
 					} else {
-						// Use lowercase codec name as fallback
-						fileExt = strings.ToLower(t.Codec)
+						// Use lowercase codec name as fallback but remove any slashes
+						cleanCodec := strings.ReplaceAll(t.Codec, "/", "_")
+						fileExt = strings.ToLower(cleanCodec)
 					}
-
+					
+					// Debug output for file naming
+					fyne.Do(func() {
+						result.SetText(result.Text + "\n\n=== Track Extraction ===\n")
+						result.SetText(result.Text + fmt.Sprintf("Track: %d (%s - %s)\n", t.Num, t.Lang, t.Codec))
+					})
+					
 					outFile = fmt.Sprintf("%s.track%d_%s.%s", mkvBaseName, t.Num, t.Lang, fileExt)
-					cmd := exec.Command("mkvextract", "tracks", mkvPath, fmt.Sprintf("%d:%s", t.Num, outFile))
-					cmd.Dir = outDir
+					
+					fyne.Do(func() {
+						result.SetText(result.Text + fmt.Sprintf("Output file: %s\n", outFile))
+					})
+					// Use absolute paths for all subtitle extractions to avoid directory creation issues
+					absOutFile := filepath.Join(outDir, outFile)
+					cmd := exec.Command("mkvextract", "tracks", mkvPath, fmt.Sprintf("%d:%s", t.Num, absOutFile))
+					
+					fyne.Do(func() {
+						result.SetText(result.Text + fmt.Sprintf("\nExtracting to: %s", absOutFile))
+					})
+					
 					output, err = cmd.CombinedOutput()
 					
 					// Set proper file permissions for subtitle files (read/write for user, read for group/others)
