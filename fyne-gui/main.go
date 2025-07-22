@@ -997,6 +997,12 @@ func main() {
 					cmd := exec.Command("mkvextract", "tracks", mkvPath, fmt.Sprintf("%d:%s", t.Num, outFile))
 					cmd.Dir = outDir
 					output, err = cmd.CombinedOutput()
+					
+					// Set proper file permissions for subtitle files (read/write for user, read for group/others)
+					if err == nil {
+						outFilePath := filepath.Join(outDir, outFile)
+						os.Chmod(outFilePath, 0644) // rw-r--r--
+					}
 				}
 
 				// Update UI on main thread
