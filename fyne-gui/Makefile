@@ -30,6 +30,15 @@ build-mac:
 	@mkdir -p $(BUILD_DIR)
 	go build -o $(BUILD_DIR)/$(APP_NAME)-mac
 
+# Create a proper macOS .app bundle
+.PHONY: bundle-mac
+bundle-mac: build-mac
+	@echo "Creating macOS app bundle..."
+	@mkdir -p $(BUILD_DIR)/$(APP_NAME).app/Contents/MacOS
+	@mkdir -p $(BUILD_DIR)/$(APP_NAME).app/Contents/Resources
+	@cp $(BUILD_DIR)/$(APP_NAME)-mac $(BUILD_DIR)/$(APP_NAME).app/Contents/MacOS/$(APP_NAME)
+	@echo '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict><key>CFBundleExecutable</key><string>$(APP_NAME)</string><key>CFBundleIconFile</key><string>icon.icns</string><key>CFBundleIdentifier</key><string>com.gmm.subtitleforge</string><key>CFBundleName</key><string>Subtitle Forge</string><key>CFBundlePackageType</key><string>APPL</string><key>CFBundleShortVersionString</key><string>1.1</string><key>NSHighResolutionCapable</key><true/></dict></plist>' > $(BUILD_DIR)/$(APP_NAME).app/Contents/Info.plist
+
 # Build for Windows
 .PHONY: build-windows
 build-windows:

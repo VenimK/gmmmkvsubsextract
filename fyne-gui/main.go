@@ -21,6 +21,7 @@ import (
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/storage"
+	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 )
 
@@ -61,8 +62,16 @@ func checkDependencies() map[string]bool {
 
 func main() {
 	trackList := container.NewVBox()
+	
+	// Create app with explicit ID and set metadata directly
 	a := app.NewWithID("com.gmm.subtitleforge")
+	a.SetIcon(theme.FileTextIcon())
+	
+	// Create main window with explicit name
 	w := a.NewWindow("Subtitle Forge")
+	// Set app metadata on window
+	w.SetMaster()
+	w.CenterOnScreen()
 	w.Resize(fyne.NewSize(800, 600))
 
 	// Check dependencies at startup
