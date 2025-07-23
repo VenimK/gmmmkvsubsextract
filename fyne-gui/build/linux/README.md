@@ -2,6 +2,9 @@
 
 A powerful GUI application for extracting and converting subtitles from MKV files, with specialized support for transforming PGS subtitles to SRT format.
 
+![Subtitle Forge Screenshot](images/app-screenshot.png)
+*Subtitle Forge in action*
+
 ## Features
 
 - User-friendly graphical interface
