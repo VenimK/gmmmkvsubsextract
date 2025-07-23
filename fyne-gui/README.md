@@ -23,6 +23,16 @@ A powerful GUI application for extracting and converting subtitles from MKV file
 - Support button for donations
 - Proper file permissions for extracted subtitle files
 
+## What's New in v1.1
+
+- Enhanced user interface with improved layout and responsiveness
+- Added real-time progress tracking for PGS to SRT conversion
+- Improved error handling and user feedback
+- Fixed issues with subtitle track detection in certain MKV files
+- Added support for drag-and-drop functionality
+- Optimized conversion process for better performance
+- Various bug fixes and stability improvements
+
 ## Requirements
 
 - [Deno](https://deno.land/) (for running the PGS to SRT conversion script)
