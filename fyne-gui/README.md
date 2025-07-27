@@ -10,6 +10,7 @@ A powerful GUI application for extracting and converting subtitles from MKV file
 - User-friendly graphical interface
 - Extract subtitle tracks from MKV files
 - Convert PGS/SUP subtitles to SRT format using OCR
+- Convert VobSub (.idx/.sub) subtitles to SRT format using OCR
 - Convert ASS/SSA subtitles to SRT format
 - Enhanced progress reporting:
   - Detailed progress bar showing percentage complete
@@ -27,6 +28,7 @@ A powerful GUI application for extracting and converting subtitles from MKV file
 ## What's New in v1.2
 
 - Added ASS/SSA to SRT conversion feature
+- Added VobSub (.idx/.sub) to SRT conversion feature using OCR
 - Improved subtitle format detection for various ASS/SSA format variants (including SubStationAlpha)
 - Enhanced ffmpeg detection and usage, prioritizing Homebrew installation on macOS
 - Fixed dependency detection issues

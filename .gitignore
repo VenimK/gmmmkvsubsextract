@@ -26,3 +26,4 @@ go.work.sum
 .env
 
 fyne-gui/build/.DS_Store
+fyne-gui/main.go.backup

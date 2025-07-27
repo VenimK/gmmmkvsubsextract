@@ -115,6 +115,54 @@ func checkDependencies() map[string]bool {
 	fmt.Println("[DEBUG] Final ffmpeg found status:", ffmpegFound)
 	results["ffmpeg"] = ffmpegFound
 
+	// Check for vobsub2srt binary
+	fmt.Println("[DEBUG] Checking for vobsub2srt...")
+	vobsub2srtPath := "/usr/local/bin/vobsub2srt"
+	vobsub2srtFound := false
+	
+	// Check if vobsub2srt exists at the expected path
+	if fileInfo, err := os.Stat(vobsub2srtPath); err == nil {
+		fmt.Println("[DEBUG] vobsub2srt exists at", vobsub2srtPath)
+		
+		// Check if the file is executable (Unix-style permission check)
+		perm := fileInfo.Mode().Perm()
+		isExecutable := (perm & 0111) != 0 // Check if any execute bit is set
+		
+		fmt.Println("[DEBUG] vobsub2srt executable permission check:", isExecutable)
+		
+		if isExecutable {
+			// Just verify the binary exists and is executable
+			vobsub2srtFound = true
+			fmt.Println("[DEBUG] vobsub2srt found and is executable")
+		} else {
+			fmt.Println("[DEBUG] vobsub2srt exists but is not executable")
+		}
+	} else {
+		fmt.Println("[DEBUG] vobsub2srt not found at", vobsub2srtPath, "error:", err)
+		
+		// Try standard path using which command
+		fmt.Println("[DEBUG] Trying to find vobsub2srt in PATH")
+		whichCmd := exec.Command("which", "vobsub2srt")
+		output, err := whichCmd.CombinedOutput()
+		if err == nil && len(output) > 0 {
+			altPath := strings.TrimSpace(string(output))
+			fmt.Println("[DEBUG] Found vobsub2srt at", altPath)
+			
+			// Check if the file exists and is executable
+			if fileInfo, err := os.Stat(altPath); err == nil {
+				// Check if the file is executable (Unix-style permission check)
+				perm := fileInfo.Mode().Perm()
+				isExecutable := (perm & 0111) != 0 // Check if any execute bit is set
+				
+				vobsub2srtFound = isExecutable
+				fmt.Println("[DEBUG] vobsub2srt executable permission check:", isExecutable)
+			}
+		}
+	}
+	
+	fmt.Println("[DEBUG] Final vobsub2srt found status:", vobsub2srtFound)
+	results["vobsub2srt"] = vobsub2srtFound
+
 	return results
 }
 
@@ -192,11 +240,20 @@ func main() {
 	// Display dependency check results
 	dependencyStatus := "System Dependency Check:\n"
 	allDependenciesInstalled := true
+	
+	// Track if vobsub2srt specifically is missing
+	vobsub2srtMissing := false
+	
 	for tool, installed := range dependencyResults {
 		status := "✅ Installed"
 		if !installed {
 			status = "❌ Not found"
 			allDependenciesInstalled = false
+			
+			// Check if vobsub2srt is the missing tool
+			if tool == "vobsub2srt" {
+				vobsub2srtMissing = true
+			}
 		}
 		dependencyStatus += fmt.Sprintf("- %s: %s\n", tool, status)
 	}
@@ -208,6 +265,81 @@ func main() {
 	}
 
 	result.SetText(dependencyStatus)
+	
+	// Create a container for dependency-related buttons
+	dependencyButtons := container.NewVBox()
+	
+	// Add install button for vobsub2srt if it's missing
+	if vobsub2srtMissing {
+		installButton := widget.NewButton("Install VobSub2SRT", func() {
+			// Show a confirmation dialog before proceeding
+			dialog.ShowConfirm("Install VobSub2SRT", 
+				"This will install VobSub2SRT from the leonard-slass fork.\n\nThe installation requires sudo privileges and will prompt for your password.\n\nDo you want to continue?", 
+				func(confirmed bool) {
+					if confirmed {
+						// Create a progress dialog
+						progress := dialog.NewProgress("Installing VobSub2SRT", "Preparing installation...", w)
+						progress.Show()
+						
+						// Run the installation script in a goroutine
+						go func() {
+							// Get the script path relative to the executable
+							execPath, err := os.Executable()
+							if err != nil {
+								fmt.Println("[ERROR] Failed to get executable path:", err)
+								execPath = "."
+							}
+							execDir := filepath.Dir(execPath)
+							scriptPath := filepath.Join(execDir, "install_vobsub2srt.sh")
+							
+							// Update progress
+							progress.SetValue(0.1)
+							
+							// Run the installation script
+							cmd := exec.Command("bash", scriptPath)
+							output, err := cmd.CombinedOutput()
+							
+							// Hide the progress dialog
+							progress.Hide()
+							
+							if err != nil {
+								// Show error dialog
+								dialog.ShowError(fmt.Errorf("Installation failed: %v\n\n%s", err, string(output)), w)
+							} else {
+								// Show success dialog
+								dialog.ShowInformation("Installation Complete", "VobSub2SRT has been successfully installed.\n\nPlease restart the application to use the VobSub to SRT conversion feature.", w)
+								
+								// Update the dependency status
+								dependencyResults = checkDependencies()
+								
+								// Update the status text
+								dependencyStatus := "System Dependency Check:\n"
+								allDependenciesInstalled := true
+								for tool, installed := range dependencyResults {
+									status := "✅ Installed"
+									if !installed {
+										status = "❌ Not found"
+										allDependenciesInstalled = false
+									}
+									dependencyStatus += fmt.Sprintf("- %s: %s\n", tool, status)
+								}
+								
+								if !allDependenciesInstalled {
+									dependencyStatus += "\n⚠️ Some required tools are missing. Please install them before using all features.\n"
+								} else {
+									dependencyStatus += "\n✅ All required tools are installed.\n"
+								}
+								
+								result.SetText(dependencyStatus)
+							}
+						}()
+					}
+				}, w)
+		})
+		
+		// Add the install button to the dependency buttons container
+		dependencyButtons.Add(installButton)
+	}
 
 	progress := widget.NewProgressBar()
 	progress.Min = 0
@@ -360,10 +492,11 @@ func main() {
 				Status: status,
 			}
 
-			// Add OCR option for PGS subtitles and ASS/SSA subtitles
+			// Add OCR option for PGS subtitles, ASS/SSA subtitles, and VobSub subtitles
 			if t.Codec == "hdmv_pgs_subtitle" || t.Codec == "HDMV PGS" ||
 				strings.Contains(strings.ToLower(t.Codec), "ass") || strings.Contains(strings.ToLower(t.Codec), "ssa") ||
-				strings.Contains(strings.ToLower(t.Codec), "substation") || strings.Contains(strings.ToLower(t.Codec), "sub station") {
+				strings.Contains(strings.ToLower(t.Codec), "substation") || strings.Contains(strings.ToLower(t.Codec), "sub station") ||
+				t.Codec == "vobsub" || t.Codec == "VobSub" {
 				t.ConvertOCR = widget.NewCheck("", nil)
 				t.ConvertOCR.SetChecked(true)
 			} else {
@@ -1234,6 +1367,285 @@ func main() {
 							remainingLabel.SetText("Completed")
 						})
 					}
+				} else if t.ConvertOCR != nil && t.ConvertOCR.Checked && (t.Codec == "vobsub" || t.Codec == "VobSub") {
+					// VobSub to SRT conversion
+					fyne.Do(func() {
+						result.SetText(result.Text + "\n\n[DEBUG] Starting VobSub to SRT conversion process")
+					})
+					
+					// For VobSub, we extract both .idx and .sub files
+					// The .idx file is the main file that contains timing and positioning information
+					// The .sub file contains the actual subtitle images
+					idxFile := fmt.Sprintf("%s.track%d_%s.idx", mkvBaseName, t.Num, t.Lang)
+					outFile = fmt.Sprintf("%s.track%d_%s.srt", mkvBaseName, t.Num, t.Lang) // Final output will be SRT
+					
+					// Get absolute paths for extraction
+					absIdxPath := filepath.Join(outDir, idxFile)
+					
+					// Debug output
+					fyne.Do(func() {
+						currentTrackLabel.SetText(fmt.Sprintf("Extracting VobSub track %d...", t.Num))
+						result.SetText(result.Text + "\n\n=== VobSub Extraction ===\n")
+						result.SetText(result.Text + fmt.Sprintf("Track: %d (%s)\n", t.Num, t.Lang))
+						result.SetText(result.Text + fmt.Sprintf("Output directory: %s\n", outDir))
+						result.SetText(result.Text + fmt.Sprintf("IDX file: %s\n", idxFile))
+						result.SetText(result.Text + fmt.Sprintf("Absolute path: %s\n", absIdxPath))
+					})
+					
+					// Extract VobSub first - use full command for debugging
+					cmdStr := fmt.Sprintf("mkvextract tracks \"%s\" %d:\"%s\"", mkvPath, t.Num, idxFile)
+					fyne.Do(func() {
+						result.SetText(result.Text + "\nRunning: " + cmdStr)
+					})
+					
+					// Create the command with proper arguments
+					cmd := exec.Command("mkvextract", "tracks", mkvPath, fmt.Sprintf("%d:%s", t.Num, idxFile))
+					cmd.Dir = outDir
+					
+					// Run the command and capture output
+					output, err = cmd.CombinedOutput()
+					
+					// Debug output - show command result
+					fyne.Do(func() {
+						result.SetText(result.Text + "\nCommand output: " + string(output))
+						if err != nil {
+							result.SetText(result.Text + "\nError: " + err.Error())
+						}
+					})
+					
+					// Check if the file was created and has content
+					idxFilePath := filepath.Join(outDir, idxFile)
+					fileInfo, statErr := os.Stat(idxFilePath)
+					if statErr != nil {
+						fyne.Do(func() {
+							result.SetText(result.Text + "\nCannot find extracted file: " + statErr.Error())
+						})
+						err = statErr
+					} else if fileInfo.Size() == 0 {
+						fyne.Do(func() {
+							result.SetText(result.Text + "\nExtracted file is empty (0 bytes)")
+						})
+						err = fmt.Errorf("extracted file is empty")
+					} else {
+						// File exists and has content, proceed with conversion
+						fyne.Do(func() {
+							result.SetText(result.Text + fmt.Sprintf("\nIDX file extracted successfully (%d bytes)", fileInfo.Size()))
+							result.SetText(result.Text + "\n\n=== VobSub to SRT Conversion ===\n")
+						})
+						
+						// Create UI elements for conversion progress
+						conversionStartTime := time.Now()
+						conversionLabel := widget.NewLabel("Converting VobSub to SRT...")
+						statusLabel := widget.NewLabel("Starting conversion...")
+						conversionProgress := widget.NewProgressBar()
+						elapsedLabel := widget.NewLabel("Elapsed: 0s")
+						remainingLabel := widget.NewLabel("Estimating...")
+						
+						// Start a ticker to update the elapsed time
+						ticker := time.NewTicker(time.Second)
+						go func() {
+							for range ticker.C {
+								elapsed := time.Since(conversionStartTime).Round(time.Second)
+								fyne.Do(func() {
+									elapsedLabel.SetText(fmt.Sprintf("Elapsed: %s", elapsed))
+								})
+							}
+						}()
+						
+						// Show the conversion progress bar and labels
+						fyne.Do(func() {
+							currentTrackLabel.SetText("Converting VobSub to SRT...")
+							progress.Hide()
+							trackList.Add(container.NewVBox(
+								conversionLabel,
+								statusLabel,
+								conversionProgress,
+								container.NewHBox(
+									elapsedLabel,
+									widget.NewLabel("|"),
+									remainingLabel,
+								),
+							))
+							trackList.Refresh()
+						})
+						
+						// Get absolute paths for input and output
+						// For vobsub2srt, we need the base path without extension
+						basePath := strings.TrimSuffix(idxFilePath, filepath.Ext(idxFilePath))
+						absOutputPath := basePath + ".srt" // vobsub2srt will create this file
+						
+						// Check if both .idx and .sub files exist
+						idxFile := basePath + ".idx"
+						subFile := basePath + ".sub"
+						
+						fyne.Do(func() {
+							result.SetText(result.Text + fmt.Sprintf("\n[DEBUG] Checking for IDX file: %s", idxFile))
+							result.SetText(result.Text + fmt.Sprintf("\n[DEBUG] Checking for SUB file: %s", subFile))
+						})
+						
+						// Check if the files exist
+						var filesExist bool = true
+						if _, err := os.Stat(idxFile); err == nil {
+							fyne.Do(func() {
+								result.SetText(result.Text + fmt.Sprintf("\n[DEBUG] IDX file exists: %s", idxFile))
+							})
+						} else {
+							filesExist = false
+							fyne.Do(func() {
+								result.SetText(result.Text + fmt.Sprintf("\n[DEBUG] IDX file does not exist: %s - %v", idxFile, err))
+							})
+						}
+						
+						if _, err := os.Stat(subFile); err == nil {
+							fyne.Do(func() {
+								result.SetText(result.Text + fmt.Sprintf("\n[DEBUG] SUB file exists: %s", subFile))
+							})
+						} else {
+							filesExist = false
+							fyne.Do(func() {
+								result.SetText(result.Text + fmt.Sprintf("\n[DEBUG] SUB file does not exist: %s - %v", subFile, err))
+							})
+						}
+						
+						// If either file is missing, show a warning
+						if !filesExist {
+							fyne.Do(func() {
+								result.SetText(result.Text + "\n[DEBUG] ⚠️ Warning: IDX or SUB file is missing, conversion may fail")
+							})
+						}
+						
+						// Pass the --lang parameter with the track language
+						langCode := t.Lang
+						if langCode == "" {
+							langCode = "eng" // Default to English if no language code is available
+						}
+						
+						// Map 3-letter language codes to 2-letter codes for vobsub2srt
+						langCodeMap := map[string]string{
+							"eng": "en", // English
+							"fre": "fr", // French
+							"fra": "fr", // French (alternate)
+							"ger": "de", // German
+							"deu": "de", // German (alternate)
+							"ita": "it", // Italian
+							"spa": "es", // Spanish
+							"por": "pt", // Portuguese
+							"dut": "nl", // Dutch
+							"nld": "nl", // Dutch (alternate)
+							"swe": "sv", // Swedish
+							"nor": "no", // Norwegian
+							"dan": "da", // Danish
+							"fin": "fi", // Finnish
+							"jpn": "ja", // Japanese
+							"kor": "ko", // Korean
+							"chi": "zh", // Chinese
+							"zho": "zh", // Chinese (alternate)
+							"rus": "ru", // Russian
+							"pol": "pl", // Polish
+							"cze": "cs", // Czech
+							"ces": "cs", // Czech (alternate)
+							"hun": "hu", // Hungarian
+							"gre": "el", // Greek
+							"ell": "el", // Greek (alternate)
+							"tur": "tr", // Turkish
+							"ara": "ar", // Arabic
+							"heb": "he", // Hebrew
+							"tha": "th", // Thai
+						}
+						
+						// Convert 3-letter code to 2-letter code if a mapping exists
+						if twoLetterCode, exists := langCodeMap[strings.ToLower(langCode)]; exists {
+							fyne.Do(func() {
+								result.SetText(result.Text + fmt.Sprintf("\n[DEBUG] Mapped language code: %s -> %s", langCode, twoLetterCode))
+							})
+							langCode = twoLetterCode
+						} else {
+							fyne.Do(func() {
+								result.SetText(result.Text + fmt.Sprintf("\n[DEBUG] No mapping found for language code: %s, using as-is", langCode))
+							})
+						}
+						
+						// Use vobsub2srt binary for conversion
+						conversionScript := "/usr/local/bin/vobsub2srt"
+						
+						// Check if the binary exists
+						if _, err := os.Stat(conversionScript); err != nil {
+							fyne.Do(func() {
+								result.SetText(result.Text + fmt.Sprintf("\n[ERROR] vobsub2srt binary not found at %s", conversionScript))
+							})
+							err = fmt.Errorf("vobsub2srt binary not found at %s", conversionScript)
+						} else {
+							fyne.Do(func() {
+								result.SetText(result.Text + fmt.Sprintf("\n[DEBUG] Using vobsub2srt binary: %s", conversionScript))
+								result.SetText(result.Text + fmt.Sprintf("\n[DEBUG] Using language code: %s for VobSub conversion", langCode))
+								result.SetText(result.Text + fmt.Sprintf("\n[DEBUG] Base path for vobsub2srt: %s", basePath))
+							})
+							
+							// Check if the output SRT file already exists and delete it if it does
+							outputSrtFile := basePath + ".srt"
+							if _, err := os.Stat(outputSrtFile); err == nil {
+								fyne.Do(func() {
+									result.SetText(result.Text + fmt.Sprintf("\n[DEBUG] Removing existing SRT file: %s", outputSrtFile))
+								})
+								os.Remove(outputSrtFile)
+							}
+							
+							// Run vobsub2srt with the language parameter
+							cmdStr = fmt.Sprintf("%s --lang %s \"%s\"", conversionScript, langCode, basePath)
+							fyne.Do(func() {
+								result.SetText(result.Text + "\n[DEBUG] Running command: " + cmdStr)
+								statusLabel.SetText("Running vobsub2srt conversion...")
+							})
+							
+							// Create the command
+							cmd = exec.Command(conversionScript, "--lang", langCode, basePath)
+							cmd.Dir = outDir
+							
+							// Run the command and capture output
+							output, err = cmd.CombinedOutput()
+							
+							// Stop the ticker
+							ticker.Stop()
+							
+							// Update UI with results
+							fyne.Do(func() {
+								result.SetText(result.Text + "\nvobsub2srt output: " + string(output))
+								
+								if err != nil {
+									result.SetText(result.Text + "\nError converting VobSub to SRT: " + err.Error())
+									statusLabel.SetText("Conversion failed!")
+									conversionProgress.SetValue(0)
+								} else {
+									result.SetText(result.Text + "\nSuccessfully ran vobsub2srt command")
+									statusLabel.SetText("Conversion completed!")
+									conversionProgress.SetValue(100)
+									
+									// Check if the output file was created
+									if fileInfo, statErr := os.Stat(absOutputPath); statErr == nil {
+										result.SetText(result.Text + fmt.Sprintf("\nSRT file created at: %s", absOutputPath))
+										result.SetText(result.Text + fmt.Sprintf("\nSRT file size: %d bytes", fileInfo.Size()))
+										
+										// Try to count lines in SRT file
+										if srtContent, readErr := os.ReadFile(absOutputPath); readErr == nil {
+											lines := strings.Split(string(srtContent), "\n")
+											result.SetText(result.Text + fmt.Sprintf("\nSRT file lines: %d", len(lines)))
+											
+											// Count subtitle entries (every 4 lines is typically one subtitle)
+											subtitleCount := (len(lines) + 3) / 4 // rough estimate
+											result.SetText(result.Text + fmt.Sprintf("\nEstimated subtitles: ~%d", subtitleCount))
+										}
+									} else {
+										result.SetText(result.Text + "\nWarning: Cannot find converted SRT file: " + statErr.Error())
+									}
+								}
+								
+								// Update elapsed time one last time
+								elapsed := time.Since(conversionStartTime).Round(time.Second)
+								elapsedLabel.SetText(fmt.Sprintf("Elapsed: %s", elapsed))
+								remainingLabel.SetText("Completed")
+							})
+						}
+					}
 				} else {
 					// Normal extraction without conversion
 					// Use proper file extension based on codec
@@ -1360,7 +1772,7 @@ func main() {
 
 	// Use a more efficient layout with container.NewBorder for better performance
 	// Create app title with version
-	titleLabel := widget.NewLabel("Subtitle Forge v1.2")
+	titleLabel := widget.NewLabel("Subtitle Forge v1.3")
 	titleLabel.TextStyle = fyne.TextStyle{Bold: true}
 
 	topContent := container.NewVBox(
@@ -1382,6 +1794,7 @@ func main() {
 	bottomContent := container.NewVBox(
 		widget.NewLabel("Results:"),
 		resultScroll,
+		dependencyButtons,
 	)
 
 	// Use Border layout for more efficient rendering

@@ -1,4 +1,4 @@
-# Subtitle Forge v1.1
+# Subtitle Forge v1.3
 
 A tool for extracting and converting subtitles from MKV files, available in both command-line (CLI) and graphical user interface (GUI) versions.
 
@@ -7,6 +7,13 @@ A tool for extracting and converting subtitles from MKV files, available in both
 This project provides two applications:
 1. **CLI Version** - Command-line tool for extracting subtitles from MKV files
 2. **GUI Version** - Fyne-based graphical application with enhanced features including PGS to SRT conversion
+
+## What's New in v1.3
+
+- **VobSub to SRT Conversion**: Convert VobSub (.idx/.sub) subtitles to SRT format using OCR
+- **Improved Dependency Detection**: Better detection of required tools including vobsub2srt
+- **Enhanced Language Support**: Automatic mapping between 3-letter and 2-letter language codes
+- **Robust Error Handling**: Improved logging and error reporting for subtitle conversion
 
 ## Features
 
@@ -19,6 +26,7 @@ This project provides two applications:
 - User-friendly graphical interface
 - Extract subtitle tracks from MKV files
 - Convert PGS/SUP subtitles to SRT format using OCR
+- Convert VobSub (.idx/.sub) subtitles to SRT format using OCR
 - Enhanced progress reporting:
   - Detailed progress bar showing percentage complete
   - Real-time frame processing status
@@ -44,8 +52,17 @@ This project provides two applications:
 - Fyne v2.6.1 or later
 - [Deno](https://deno.land/) (for running the PGS to SRT conversion script)
 - [mkvmerge and mkvextract](https://mkvtoolnix.download/) (part of MKVToolNix)
-- [Tesseract OCR](https://github.com/tesseract-ocr/tesseract) (used by the PGS-to-SRT conversion script)
+- [Tesseract OCR](https://github.com/tesseract-ocr/tesseract) (used by the PGS-to-SRT and VobSub-to-SRT conversion)
+- [VobSub2SRT](https://github.com/ruediger/VobSub2SRT) (for VobSub to SRT conversion)
 - PGS-to-SRT conversion script
+
+   
+git clone https://github.com/leonard-slass/VobSub2SRT.git
+cd VobSub2SRT
+mkdir build
+cd build
+cmake -DCMAKE_POLICY_VERSION_MINIMUM=3.5 ..
+sudo make install
 
 ## Installation
 
@@ -133,6 +150,33 @@ The application includes a powerful feature to convert PGS/SUP subtitle files (i
 - Verify that the Tesseract language data files are available
 - For poor OCR quality, you may need to adjust the conversion parameters in the script
 - The application creates detailed logs that can help diagnose conversion issues
+
+## VobSub to SRT Conversion Process
+
+The application also supports converting VobSub subtitles (.idx/.sub files) to SRT format using OCR technology. This feature works similarly to the PGS conversion but uses the vobsub2srt tool.
+
+### How It Works
+
+1. **Extraction**: First, the VobSub subtitles are extracted from the MKV file using `mkvextract` as .idx and .sub files
+
+2. **OCR Processing**: The extracted files are then processed using the vobsub2srt tool that:
+   - Reads the subtitle images from the .sub file and the timing information from the .idx file
+   - Uses Tesseract OCR to convert the subtitle images to text
+   - Automatically handles language detection and mapping
+   - Formats the output as a standard SRT file
+
+3. **Language Support**: The conversion process requires proper language mapping:
+   - MKV files typically use 3-letter language codes (e.g., 'eng', 'fre', 'ger')
+   - The vobsub2srt tool uses 2-letter language codes (e.g., 'en', 'fr', 'de')
+   - The application automatically maps between these formats
+
+### Requirements for VobSub Conversion
+
+- **vobsub2srt**: The command-line tool that performs the actual conversion
+   - Should be installed at `/usr/local/bin/vobsub2srt`
+   - Can be built from [VobSub2SRT GitHub repository](https://github.com/ruediger/VobSub2SRT)
+- **Tesseract OCR**: The underlying OCR engine used for text recognition
+- **Tessdata Files**: Language training data for Tesseract
 
 ./gmmmkvsubsextract -x /path/to/yourfile.mkv
 
