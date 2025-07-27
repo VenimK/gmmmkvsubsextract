@@ -1,4 +1,4 @@
-# Subtitle Forge v1.1
+# Subtitle Forge v1.2
 
 A powerful GUI application for extracting and converting subtitles from MKV files, with specialized support for transforming PGS subtitles to SRT format.
 
@@ -10,6 +10,7 @@ A powerful GUI application for extracting and converting subtitles from MKV file
 - User-friendly graphical interface
 - Extract subtitle tracks from MKV files
 - Convert PGS/SUP subtitles to SRT format using OCR
+- Convert ASS/SSA subtitles to SRT format
 - Enhanced progress reporting:
   - Detailed progress bar showing percentage complete
   - Real-time frame processing status
@@ -22,6 +23,13 @@ A powerful GUI application for extracting and converting subtitles from MKV file
 - Automatic output directory setting (defaults to MKV file location)
 - Support button for donations
 - Proper file permissions for extracted subtitle files
+
+## What's New in v1.2
+
+- Added ASS/SSA to SRT conversion feature
+- Improved subtitle format detection for various ASS/SSA format variants (including SubStationAlpha)
+- Enhanced ffmpeg detection and usage, prioritizing Homebrew installation on macOS
+- Fixed dependency detection issues
 
 ## What's New in v1.1
 
@@ -37,6 +45,7 @@ A powerful GUI application for extracting and converting subtitles from MKV file
 
 - [Deno](https://deno.land/) (for running the PGS to SRT conversion script)
 - [mkvmerge](https://mkvtoolnix.download/) (part of MKVToolNix)
+- [ffmpeg](https://ffmpeg.org/) (for ASS/SSA to SRT conversion)
 
 ## Installation
 

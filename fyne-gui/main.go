@@ -57,16 +57,74 @@ func checkDependencies() map[string]bool {
 	tesseractCmd := exec.Command("tesseract", "--version")
 	results["tesseract"] = tesseractCmd.Run() == nil
 
+	// Check for ffmpeg
+	// First try Homebrew path explicitly (preferred)
+	homebrewPath := "/opt/homebrew/bin/ffmpeg"
+	ffmpegFound := false
+
+	// Debug output for ffmpeg detection
+	fmt.Println("[DEBUG] Checking for ffmpeg...")
+
+	// Simple file existence check for Homebrew ffmpeg
+	if _, err := os.Stat(homebrewPath); err == nil {
+		fmt.Println("[DEBUG] Homebrew ffmpeg exists at", homebrewPath)
+		// Just check if file exists and is executable
+		ffmpegFound = true
+		fmt.Println("[DEBUG] Homebrew ffmpeg found")
+	} else {
+		fmt.Println("[DEBUG] Homebrew ffmpeg not found at", homebrewPath, "error:", err)
+
+		// Try standard path using -h flag instead of --version
+		fmt.Println("[DEBUG] Trying standard ffmpeg path")
+		ffmpegCmd := exec.Command("ffmpeg", "-h")
+		output, err := ffmpegCmd.CombinedOutput()
+		ffmpegFound = err == nil && strings.Contains(string(output), "usage")
+		fmt.Println("[DEBUG] Standard ffmpeg check result:", ffmpegFound)
+		if err != nil {
+			fmt.Println("[DEBUG] Standard ffmpeg error:", err)
+		}
+
+		// If still not found, try common Miniconda/Anaconda path
+		if !ffmpegFound {
+			// Get home directory
+			homeDir, err := os.UserHomeDir()
+			if err == nil {
+				// Check Miniconda path
+				minicondaPath := filepath.Join(homeDir, "miniconda3", "bin", "ffmpeg")
+				if _, err := os.Stat(minicondaPath); err == nil {
+					fmt.Println("[DEBUG] Miniconda ffmpeg exists at", minicondaPath)
+					// Just check if file exists and is executable
+					ffmpegFound = true
+					fmt.Println("[DEBUG] Miniconda ffmpeg found")
+				}
+
+				// Also check Anaconda path if needed
+				if !ffmpegFound {
+					anacondaPath := filepath.Join(homeDir, "anaconda3", "bin", "ffmpeg")
+					if _, err := os.Stat(anacondaPath); err == nil {
+						fmt.Println("[DEBUG] Anaconda ffmpeg exists at", anacondaPath)
+						// Just check if file exists and is executable
+						ffmpegFound = true
+						fmt.Println("[DEBUG] Anaconda ffmpeg found")
+					}
+				}
+			}
+		}
+	}
+
+	fmt.Println("[DEBUG] Final ffmpeg found status:", ffmpegFound)
+	results["ffmpeg"] = ffmpegFound
+
 	return results
 }
 
 func main() {
 	trackList := container.NewVBox()
-	
+
 	// Create app with explicit ID and set metadata directly
 	a := app.NewWithID("com.gmm.subtitleforge")
 	a.SetIcon(theme.FileTextIcon())
-	
+
 	// Create main window with explicit name
 	w := a.NewWindow("Subtitle Forge")
 	// Set app metadata on window
@@ -302,10 +360,14 @@ func main() {
 				Status: status,
 			}
 
-			// Add OCR option for PGS subtitles
-			if trackCodec == "hdmv_pgs_subtitle" || trackCodec == "HDMV PGS" {
+			// Add OCR option for PGS subtitles and ASS/SSA subtitles
+			if t.Codec == "hdmv_pgs_subtitle" || t.Codec == "HDMV PGS" ||
+				strings.Contains(strings.ToLower(t.Codec), "ass") || strings.Contains(strings.ToLower(t.Codec), "ssa") ||
+				strings.Contains(strings.ToLower(t.Codec), "substation") || strings.Contains(strings.ToLower(t.Codec), "sub station") {
 				t.ConvertOCR = widget.NewCheck("", nil)
 				t.ConvertOCR.SetChecked(true)
+			} else {
+				t.ConvertOCR = nil
 			}
 
 			trackItems = append(trackItems, t)
@@ -985,6 +1047,193 @@ func main() {
 							})
 						}
 					}
+				} else if t.ConvertOCR != nil && t.ConvertOCR.Checked && (strings.Contains(strings.ToLower(t.Codec), "ass") || strings.Contains(strings.ToLower(t.Codec), "ssa") || strings.Contains(strings.ToLower(t.Codec), "substation") || strings.Contains(strings.ToLower(t.Codec), "sub station")) {
+					// ASS/SSA to SRT conversion
+					fyne.Do(func() {
+						result.SetText(result.Text + "\n\n[DEBUG] Starting ASS/SSA to SRT conversion process")
+					})
+					tempAssFile := fmt.Sprintf("%s.track%d_%s.ass", mkvBaseName, t.Num, t.Lang)
+					outFile = fmt.Sprintf("%s.track%d_%s.srt", mkvBaseName, t.Num, t.Lang) // Final output will be SRT
+
+					// Get absolute paths for extraction
+					absAssPath := filepath.Join(outDir, tempAssFile)
+
+					// Debug output
+					fyne.Do(func() {
+						currentTrackLabel.SetText(fmt.Sprintf("Extracting ASS/SSA track %d...", t.Num))
+						result.SetText(result.Text + "\n\n=== ASS/SSA Extraction ===\n")
+						result.SetText(result.Text + fmt.Sprintf("Track: %d (%s)\n", t.Num, t.Lang))
+						result.SetText(result.Text + fmt.Sprintf("Output directory: %s\n", outDir))
+						result.SetText(result.Text + fmt.Sprintf("ASS/SSA file: %s\n", tempAssFile))
+						result.SetText(result.Text + fmt.Sprintf("Absolute path: %s\n", absAssPath))
+					})
+
+					// Extract ASS/SSA first - use full command for debugging
+					cmdStr := fmt.Sprintf("mkvextract tracks \"%s\" %d:\"%s\"", mkvPath, t.Num, tempAssFile)
+					fyne.Do(func() {
+						result.SetText(result.Text + "\nRunning: " + cmdStr)
+					})
+
+					// Create the command with proper arguments
+					cmd := exec.Command("mkvextract", "tracks", mkvPath, fmt.Sprintf("%d:%s", t.Num, tempAssFile))
+					cmd.Dir = outDir
+
+					// Run the command and capture output
+					output, err = cmd.CombinedOutput()
+
+					// Debug output - show command result
+					fyne.Do(func() {
+						result.SetText(result.Text + "\nCommand output: " + string(output))
+						if err != nil {
+							result.SetText(result.Text + "\nError: " + err.Error())
+						}
+					})
+
+					// Check if the file was created and has content
+					assFilePath := filepath.Join(outDir, tempAssFile)
+					fileInfo, statErr := os.Stat(assFilePath)
+					if statErr != nil {
+						fyne.Do(func() {
+							result.SetText(result.Text + "\nCannot find extracted file: " + statErr.Error())
+						})
+						err = statErr
+					} else if fileInfo.Size() == 0 {
+						fyne.Do(func() {
+							result.SetText(result.Text + "\nExtracted file is empty (0 bytes)")
+						})
+						err = fmt.Errorf("extracted file is empty (0 bytes)")
+					} else {
+						fyne.Do(func() {
+							result.SetText(result.Text + fmt.Sprintf("\nSuccessfully extracted ASS/SSA file (%d bytes)", fileInfo.Size()))
+						})
+					}
+
+					if err == nil {
+						// Create a progress bar for the conversion process
+						conversionProgress := widget.NewProgressBar()
+						conversionProgress.Min = 0
+						conversionProgress.Max = 100
+						conversionProgress.SetValue(0)
+
+						conversionLabel := widget.NewLabel("Converting ASS/SSA to SRT...")
+						statusLabel := widget.NewLabel("Processing ASS/SSA file...")
+						elapsedLabel := widget.NewLabel("Elapsed: 0s")
+						remainingLabel := widget.NewLabel("Converting...")
+
+						// Track conversion start time
+						conversionStartTime := time.Now()
+
+						// Create a ticker to update elapsed time
+						ticker := time.NewTicker(500 * time.Millisecond)
+						go func() {
+							defer ticker.Stop()
+							var lastElapsedText string
+
+							for range ticker.C {
+								elapsed := time.Since(conversionStartTime).Round(time.Second)
+								newElapsedText := fmt.Sprintf("Elapsed: %s", elapsed)
+
+								// Only update UI if text has changed
+								if newElapsedText != lastElapsedText {
+									lastElapsedText = newElapsedText
+									fyne.Do(func() {
+										elapsedLabel.SetText(newElapsedText)
+										conversionProgress.SetValue(50) // Simple indeterminate progress
+									})
+								}
+							}
+						}()
+
+						fyne.Do(func() {
+							result.SetText(result.Text + "\n\n[DEBUG] ASS/SSA extraction completed successfully, starting conversion process")
+
+							// Show the conversion progress bar and labels
+							currentTrackLabel.SetText("Converting ASS/SSA to SRT...")
+							progress.Hide()
+							trackList.Add(container.NewVBox(
+								conversionLabel,
+								statusLabel,
+								conversionProgress,
+								container.NewHBox(
+									elapsedLabel,
+									widget.NewLabel("|"),
+									remainingLabel,
+								),
+							))
+							trackList.Refresh()
+						})
+
+						// Get absolute paths for input and output
+						absInputPath := filepath.Join(outDir, tempAssFile)
+						absOutputPath := filepath.Join(outDir, outFile)
+
+						// Use ffmpeg to convert ASS/SSA to SRT
+						fyne.Do(func() {
+							result.SetText(result.Text + "\n\n[DEBUG] Using ffmpeg to convert ASS/SSA to SRT")
+							statusLabel.SetText("Running ffmpeg conversion...")
+						})
+
+						// Get ffmpeg path - prioritize Homebrew version
+						ffmpegPath := "ffmpeg" // Default fallback path
+
+						// First check Homebrew path (preferred)
+						homebrewPath := "/opt/homebrew/bin/ffmpeg"
+						if _, err := os.Stat(homebrewPath); err == nil {
+							ffmpegPath = homebrewPath
+							fyne.Do(func() {
+								result.SetText(result.Text + "\n[DEBUG] Using Homebrew ffmpeg: " + homebrewPath)
+							})
+						} else {
+							// If Homebrew not found, check Miniconda as fallback
+							homeDir, err := os.UserHomeDir()
+							if err == nil {
+								minicondaPath := filepath.Join(homeDir, "miniconda3", "bin", "ffmpeg")
+								if _, err := os.Stat(minicondaPath); err == nil {
+									ffmpegPath = minicondaPath
+									fyne.Do(func() {
+										result.SetText(result.Text + "\n[DEBUG] Using Miniconda ffmpeg: " + minicondaPath)
+									})
+								}
+							}
+						}
+
+						// Create the ffmpeg command with the appropriate path
+						cmd = exec.Command(ffmpegPath, "-i", absInputPath, "-f", "srt", absOutputPath)
+						cmd.Dir = outDir
+
+						// Run the command and capture output
+						output, err = cmd.CombinedOutput()
+
+						// Stop the ticker
+						ticker.Stop()
+
+						// Update UI with results
+						fyne.Do(func() {
+							result.SetText(result.Text + "\nffmpeg output: " + string(output))
+
+							if err != nil {
+								result.SetText(result.Text + "\nError converting ASS/SSA to SRT: " + err.Error())
+								statusLabel.SetText("Conversion failed!")
+								conversionProgress.SetValue(0)
+							} else {
+								result.SetText(result.Text + "\nSuccessfully converted ASS/SSA to SRT")
+								statusLabel.SetText("Conversion completed!")
+								conversionProgress.SetValue(100)
+
+								// Check if the output file was created
+								if _, statErr := os.Stat(absOutputPath); statErr == nil {
+									result.SetText(result.Text + fmt.Sprintf("\nSRT file created at: %s", absOutputPath))
+								} else {
+									result.SetText(result.Text + "\nWarning: Cannot find converted SRT file: " + statErr.Error())
+								}
+							}
+
+							// Update elapsed time one last time
+							elapsed := time.Since(conversionStartTime).Round(time.Second)
+							elapsedLabel.SetText(fmt.Sprintf("Elapsed: %s", elapsed))
+							remainingLabel.SetText("Completed")
+						})
+					}
 				} else {
 					// Normal extraction without conversion
 					// Use proper file extension based on codec
@@ -1111,7 +1360,7 @@ func main() {
 
 	// Use a more efficient layout with container.NewBorder for better performance
 	// Create app title with version
-	titleLabel := widget.NewLabel("Subtitle Forge v1.1")
+	titleLabel := widget.NewLabel("Subtitle Forge v1.2")
 	titleLabel.TextStyle = fyne.TextStyle{Bold: true}
 
 	topContent := container.NewVBox(
