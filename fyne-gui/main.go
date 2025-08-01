@@ -35,6 +35,7 @@ type TrackItem struct {
 	Check      *widget.Check
 	Status     *widget.Label
 	ConvertOCR *widget.Check // Option to convert PGS to SRT using OCR
+	LangSelect *widget.Select // Language selection dropdown for OCR
 }
 
 // checkDependencies verifies if all required external tools are installed
@@ -503,8 +504,46 @@ func main() {
 				t.Codec == "vobsub" || t.Codec == "VobSub" {
 				t.ConvertOCR = widget.NewCheck("", nil)
 				t.ConvertOCR.SetChecked(true)
+				
+				// Add language selection for OCR conversion
+				if t.Codec == "hdmv_pgs_subtitle" || t.Codec == "HDMV PGS" || t.Codec == "vobsub" || t.Codec == "VobSub" {
+					// Create language options
+					langOptions := []string{
+						"Auto (" + t.Lang + ")", // Auto option with detected language
+						"English (en)",
+						"French (fr)",
+						"German (de)",
+						"Spanish (es)",
+						"Italian (it)",
+						"Portuguese (pt)",
+						"Dutch (nl)",
+						"Russian (ru)",
+						"Japanese (ja)",
+						"Chinese (zh)",
+						"Korean (ko)",
+						"Czech (cs)",
+						"Polish (pl)",
+						"Swedish (sv)",
+						"Danish (da)",
+						"Finnish (fi)",
+						"Norwegian (no)",
+						"Hungarian (hu)",
+						"Greek (el)",
+						"Turkish (tr)",
+						"Arabic (ar)",
+						"Hebrew (he)",
+						"Thai (th)",
+					}
+					
+					// Create language dropdown
+					t.LangSelect = widget.NewSelect(langOptions, nil)
+					t.LangSelect.SetSelected("Auto (" + t.Lang + ")")
+				} else {
+					t.LangSelect = nil
+				}
 			} else {
 				t.ConvertOCR = nil
+				t.LangSelect = nil
 			}
 
 			trackItems = append(trackItems, t)
@@ -514,9 +553,17 @@ func main() {
 
 			var row *fyne.Container
 			if t.ConvertOCR != nil {
-				// For PGS subtitles, show OCR option
+				// For PGS/VobSub subtitles, show OCR option and language selection
 				ocrLabel := widget.NewLabel("Convert to SRT")
-				row = container.NewHBox(check, status, trackInfo, t.ConvertOCR, ocrLabel)
+				
+				if t.LangSelect != nil {
+					// Add language selection dropdown for OCR-based conversion
+					langLabel := widget.NewLabel("OCR Language:")
+					row = container.NewHBox(check, status, trackInfo, t.ConvertOCR, ocrLabel, langLabel, t.LangSelect)
+				} else {
+					// For ASS/SSA conversion (no OCR language needed)
+					row = container.NewHBox(check, status, trackInfo, t.ConvertOCR, ocrLabel)
+				}
 			} else {
 				// For other subtitle formats
 				row = container.NewHBox(check, status, trackInfo)
@@ -737,8 +784,71 @@ func main() {
 
 						// Use the user's custom pgs-to-srt-2 tool with Deno
 						pgsToSrtScript := "/Users/venimk/Downloads/pgs-to-srt-2/pgs-to-srt.js"
-						// Define the path to the trained data file
-						trainedDataPath := filepath.Join(filepath.Dir(pgsToSrtScript), "tessdata_fast", "eng.traineddata")
+						// Get language from user selection or use track language as default
+						langCode := "eng" // Default to English
+						if t.Lang != "" {
+							langCode = t.Lang
+						}
+
+						// Check if user has selected a specific language
+						if t.LangSelect != nil && t.LangSelect.Selected != "" && !strings.HasPrefix(t.LangSelect.Selected, "Auto") {
+							// Extract the language code from the selection (format: "Language (code)")
+							selection := t.LangSelect.Selected
+							// Extract the code part between parentheses
+							if start := strings.LastIndex(selection, "("); start != -1 {
+								if end := strings.LastIndex(selection, ")"); end != -1 && end > start {
+									// Extract the 2-letter code
+									twoLetterCode := selection[start+1 : end]
+									fyne.Do(func() {
+										result.SetText(result.Text + fmt.Sprintf("\n[DEBUG] User selected OCR language: %s (code: %s)", selection, twoLetterCode))
+									})
+
+									// Map 2-letter code to 3-letter code for Tesseract
+									langCodeMap := map[string]string{
+										"en": "eng", // English
+										"fr": "fra", // French
+										"de": "deu", // German
+										"it": "ita", // Italian
+										"es": "spa", // Spanish
+										"pt": "por", // Portuguese
+										"nl": "nld", // Dutch
+										"sv": "swe", // Swedish
+										"no": "nor", // Norwegian
+										"da": "dan", // Danish
+										"fi": "fin", // Finnish
+										"ja": "jpn", // Japanese
+										"ko": "kor", // Korean
+										"zh": "chi", // Chinese
+										"ru": "rus", // Russian
+										"pl": "pol", // Polish
+										"cs": "ces", // Czech
+										"hu": "hun", // Hungarian
+										"el": "ell", // Greek
+										"tr": "tur", // Turkish
+										"ar": "ara", // Arabic
+										"he": "heb", // Hebrew
+										"th": "tha", // Thai
+									}
+
+									// Convert 2-letter code to 3-letter code if a mapping exists
+									if threeLetterCode, exists := langCodeMap[twoLetterCode]; exists {
+										langCode = threeLetterCode
+										fyne.Do(func() {
+											result.SetText(result.Text + fmt.Sprintf("\n[DEBUG] Mapped language code for OCR: %s -> %s", twoLetterCode, langCode))
+										})
+									} else {
+										// If no mapping exists, use the 2-letter code directly
+										langCode = twoLetterCode
+										fyne.Do(func() {
+											result.SetText(result.Text + fmt.Sprintf("\n[DEBUG] Using language code as-is for OCR: %s", langCode))
+										})
+									}
+								}
+							}
+						}
+
+						// Define the path to the trained data file with the selected language
+						trainedDataPath := filepath.Join(filepath.Dir(pgsToSrtScript), "tessdata_fast", langCode+".traineddata")
 
 						// Get absolute paths for input and output
 						absInputPath := filepath.Join(outDir, tempPgsFile)
@@ -1518,55 +1628,72 @@ func main() {
 							})
 						}
 						
-						// Pass the --lang parameter with the track language
+						// Get language from user selection or use track language as default
 						langCode := t.Lang
 						if langCode == "" {
 							langCode = "eng" // Default to English if no language code is available
 						}
 						
-						// Map 3-letter language codes to 2-letter codes for vobsub2srt
-						langCodeMap := map[string]string{
-							"eng": "en", // English
-							"fre": "fr", // French
-							"fra": "fr", // French (alternate)
-							"ger": "de", // German
-							"deu": "de", // German (alternate)
-							"ita": "it", // Italian
-							"spa": "es", // Spanish
-							"por": "pt", // Portuguese
-							"dut": "nl", // Dutch
-							"nld": "nl", // Dutch (alternate)
-							"swe": "sv", // Swedish
-							"nor": "no", // Norwegian
-							"dan": "da", // Danish
-							"fin": "fi", // Finnish
-							"jpn": "ja", // Japanese
-							"kor": "ko", // Korean
-							"chi": "zh", // Chinese
-							"zho": "zh", // Chinese (alternate)
-							"rus": "ru", // Russian
-							"pol": "pl", // Polish
-							"cze": "cs", // Czech
-							"ces": "cs", // Czech (alternate)
-							"hun": "hu", // Hungarian
-							"gre": "el", // Greek
-							"ell": "el", // Greek (alternate)
-							"tur": "tr", // Turkish
-							"ara": "ar", // Arabic
-							"heb": "he", // Hebrew
-							"tha": "th", // Thai
-						}
-						
-						// Convert 3-letter code to 2-letter code if a mapping exists
-						if twoLetterCode, exists := langCodeMap[strings.ToLower(langCode)]; exists {
-							fyne.Do(func() {
-								result.SetText(result.Text + fmt.Sprintf("\n[DEBUG] Mapped language code: %s -> %s", langCode, twoLetterCode))
-							})
-							langCode = twoLetterCode
+						// Check if user has selected a specific language
+						if t.LangSelect != nil && t.LangSelect.Selected != "" && !strings.HasPrefix(t.LangSelect.Selected, "Auto") {
+							// Extract the language code from the selection (format: "Language (code)")
+							selection := t.LangSelect.Selected
+							// Extract the code part between parentheses
+							if start := strings.LastIndex(selection, "("); start != -1 {
+								if end := strings.LastIndex(selection, ")"); end != -1 && end > start {
+									// Extract the 2-letter code directly
+									twoLetterCode := selection[start+1 : end]
+									fyne.Do(func() {
+										result.SetText(result.Text + fmt.Sprintf("\n[DEBUG] User selected language: %s (code: %s)", selection, twoLetterCode))
+									})
+									langCode = twoLetterCode
+								}
+							}
 						} else {
-							fyne.Do(func() {
-								result.SetText(result.Text + fmt.Sprintf("\n[DEBUG] No mapping found for language code: %s, using as-is", langCode))
-							})
+							// Using auto-detected language, map 3-letter code to 2-letter code
+							langCodeMap := map[string]string{
+								"eng": "en", // English
+								"fre": "fr", // French
+								"fra": "fr", // French (alternate)
+								"ger": "de", // German
+								"deu": "de", // German (alternate)
+								"ita": "it", // Italian
+								"spa": "es", // Spanish
+								"por": "pt", // Portuguese
+								"dut": "nl", // Dutch
+								"nld": "nl", // Dutch (alternate)
+								"swe": "sv", // Swedish
+								"nor": "no", // Norwegian
+								"dan": "da", // Danish
+								"fin": "fi", // Finnish
+								"jpn": "ja", // Japanese
+								"kor": "ko", // Korean
+								"chi": "zh", // Chinese
+								"zho": "zh", // Chinese (alternate)
+								"rus": "ru", // Russian
+								"pol": "pl", // Polish
+								"cze": "cs", // Czech
+								"ces": "cs", // Czech (alternate)
+								"hun": "hu", // Hungarian
+								"gre": "el", // Greek
+								"ell": "el", // Greek (alternate)
+								"tur": "tr", // Turkish
+								"ara": "ar", // Arabic
+								"heb": "he", // Hebrew
+								"tha": "th", // Thai
+							}
+							
+							// Convert 3-letter code to 2-letter code if a mapping exists
+							if twoLetterCode, exists := langCodeMap[strings.ToLower(langCode)]; exists {
+								fyne.Do(func() {
+									result.SetText(result.Text + fmt.Sprintf("\n[DEBUG] Mapped language code: %s -> %s", langCode, twoLetterCode))
+								})
+								langCode = twoLetterCode
+							} else {
+								fyne.Do(func() {
+									result.SetText(result.Text + fmt.Sprintf("\n[DEBUG] No mapping found for language code: %s, using as-is", langCode))
+								})
+							}
 						}
 						
 						// Use vobsub2srt binary for conversion

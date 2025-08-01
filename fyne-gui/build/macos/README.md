@@ -10,6 +10,7 @@ This project provides two applications:
 
 ## What's New in v1.4
 
+- **OCR Language Selection**: Manual language selection for PGS and VobSub subtitle conversion
 - **Improved UI Layout**: Larger window size for better visibility
 - **Enhanced Track Display**: Scrollable track list that can handle any number of subtitle tracks
 - **Better Usability**: Optimized track list area to show more tracks at once
@@ -175,6 +176,7 @@ The application also supports converting VobSub subtitles (.idx/.sub files) to S
    - MKV files typically use 3-letter language codes (e.g., 'eng', 'fre', 'ger')
    - The vobsub2srt tool uses 2-letter language codes (e.g., 'en', 'fr', 'de')
    - The application automatically maps between these formats
+   - You can manually select the OCR language from a dropdown menu for better accuracy
 
 ### Requirements for VobSub Conversion
 
