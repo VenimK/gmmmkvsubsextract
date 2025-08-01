@@ -1,17 +1,38 @@
-# Subtitle Forge v1.3
+# Subtitle Forge v1.4
 
-A powerful GUI application for extracting and converting subtitles from MKV files, with specialized support for transforming PGS subtitles to SRT format.
+A tool for extracting and converting subtitles from MKV files, available in both command-line (CLI) and graphical user interface (GUI) versions.
 
-![Subtitle Forge Screenshot](images/app-screenshot.png)
-*Subtitle Forge in action*
+## Overview
+
+This project provides two applications:
+1. **CLI Version** - Command-line tool for extracting subtitles from MKV files
+2. **GUI Version** - Fyne-based graphical application with enhanced features including PGS to SRT conversion
+
+## What's New in v1.4
+
+- **Improved UI Layout**: Larger window size for better visibility
+- **Enhanced Track Display**: Scrollable track list that can handle any number of subtitle tracks
+- **Better Usability**: Optimized track list area to show more tracks at once
+
+## What's New in v1.3
+
+- **VobSub to SRT Conversion**: Convert VobSub (.idx/.sub) subtitles to SRT format using OCR
+- **Improved Dependency Detection**: Better detection of required tools including vobsub2srt
+- **Enhanced Language Support**: Automatic mapping between 3-letter and 2-letter language codes
+- **Robust Error Handling**: Improved logging and error reporting for subtitle conversion
 
 ## Features
 
+### CLI Version
+- Extract subtitles from MKV files
+- Support for multiple subtitle formats including SRT, ASS, and SUP
+- Automatic naming of extracted subtitle files based on track properties
+
+### GUI Version
 - User-friendly graphical interface
 - Extract subtitle tracks from MKV files
 - Convert PGS/SUP subtitles to SRT format using OCR
 - Convert VobSub (.idx/.sub) subtitles to SRT format using OCR
-- Convert ASS/SSA subtitles to SRT format
 - Enhanced progress reporting:
   - Detailed progress bar showing percentage complete
   - Real-time frame processing status
@@ -25,108 +46,76 @@ A powerful GUI application for extracting and converting subtitles from MKV file
 - Support button for donations
 - Proper file permissions for extracted subtitle files
 
-## What's New in v1.3
-
-- Added ASS/SSA to SRT conversion feature
-- Added VobSub (.idx/.sub) to SRT conversion feature using OCR
-- Improved subtitle format detection for various ASS/SSA format variants (including SubStationAlpha)
-- Enhanced ffmpeg detection and usage, prioritizing Homebrew installation on macOS
-- Fixed dependency detection issues
-
-## What's New in v1.2
-
-- Enhanced user interface with improved layout and responsiveness
-- Added real-time progress tracking for PGS to SRT conversion
-- Improved error handling and user feedback
-- Fixed issues with subtitle track detection in certain MKV files
-- Added support for drag-and-drop functionality
-- Optimized conversion process for better performance
-- Various bug fixes and stability improvements
-
 ## Requirements
 
+### CLI Version
+- Go 1.16 or later
+- `mkvmerge` and `mkvextract` tools from the MKVToolNix package
+- `gocmd` library
+
+### GUI Version
+- Go 1.18 or later
+- Fyne v2.6.1 or later
 - [Deno](https://deno.land/) (for running the PGS to SRT conversion script)
-- [mkvmerge](https://mkvtoolnix.download/) (part of MKVToolNix)
-- [ffmpeg](https://ffmpeg.org/) (for ASS/SSA to SRT conversion)
+- [mkvmerge and mkvextract](https://mkvtoolnix.download/) (part of MKVToolNix)
+- [Tesseract OCR](https://github.com/tesseract-ocr/tesseract) (used by the PGS-to-SRT and VobSub-to-SRT conversion)
+- [VobSub2SRT](https://github.com/ruediger/VobSub2SRT) (for VobSub to SRT conversion)
+- PGS-to-SRT conversion script
+
+   
+git clone https://github.com/leonard-slass/VobSub2SRT.git
+cd VobSub2SRT
+mkdir build
+cd build
+cmake -DCMAKE_POLICY_VERSION_MINIMUM=3.5 ..
+sudo make install
 
 ## Installation
 
-### macOS
+### CLI Version
+1. Install Go from [golang.org](https://golang.org/dl/)
+2. Install MKVToolNix from [mkvtoolnix.download](https://mkvtoolnix.download/)
+3. Clone the repository and navigate to the project directory:
+    ```sh
+    git clone https://github.com/rhaseven7h/gmmmkvsubsextract.git
+    cd gmmmkvsubsextract
+    ```
+4. Build the CLI version:
+    ```sh
+    go build -o gmmmkvsubsextract
+    ```
 
-1. Extract the `subtitle-forge-macos.tar.gz` archive
+### GUI Version
+
+#### macOS
+1. Extract the `gmmmkvsubsextract-macos.tar.gz` archive
 2. Install Deno: `brew install deno`
 3. Install MKVToolNix: `brew install mkvtoolnix`
-4. Run the application: `./subtitle-forge-mac`
+4. Run the application: `./gmmmkvsubsextract-mac`
 
-#### Handling Security Warnings
-
-When running the application for the first time, macOS may display a security warning: "Apple can't verify that this app is free from malware." This happens because the application isn't signed with an Apple Developer certificate. To bypass this:
-
-**Method 1: Using Finder**
-1. Locate the application in Finder
-2. Right-click (or Control-click) on the application
-3. Select "Open" from the context menu
-4. Click "Open" in the dialog that appears
-5. After doing this once, you can open the application normally in the future
-
-**Method 2: Using Terminal**
-1. Open Terminal
-2. Run: `xattr -d com.apple.quarantine /path/to/subtitle-forge-mac`
-3. Replace `/path/to/` with the actual path to the application
-
-**Note:** This warning appears because the application is not signed with an Apple Developer certificate, not because it contains malware.
-
-### Windows
-
-1. Extract the `subtitle-forge-windows.zip` archive
+#### Windows
+1. Extract the `gmmmkvsubsextract-windows.zip` archive
 2. Install Deno: [Deno Installation](https://deno.land/#installation)
 3. Install MKVToolNix: [MKVToolNix Download](https://mkvtoolnix.download/downloads.html)
 4. Add both to your PATH environment variable
-5. Run the application by double-clicking `subtitle-forge.exe`
+5. Run the application by double-clicking `gmmmkvsubsextract.exe`
 
-### Linux
-
-1. Extract the `subtitle-forge-linux.tar.gz` archive
+#### Linux
+1. Extract the `gmmmkvsubsextract-linux.tar.gz` archive
 2. Install Deno: `curl -fsSL https://deno.land/x/install/install.sh | sh`
 3. Install MKVToolNix: Use your distribution's package manager (e.g., `apt install mkvtoolnix`)
-4. Run the application: `./subtitle-forge-linux`
+4. Run the application: `./gmmmkvsubsextract-linux`
+
+#### Building from Source
+1. Clone the repository
+2. Navigate to the `fyne-gui` directory
+3. Install Fyne dependencies: [Fyne Getting Started](https://developer.fyne.io/started/)
+4. Run the build script: `./build.sh`
 
 ## Usage
 
-1. Load an MKV file using one of these methods:
-   - Click "Select MKV File" to choose your MKV file using the file dialog
-   - Or simply drag and drop an MKV file onto the application window
-2. The output directory is automatically set to the same location as your MKV file
-   - You can change it by clicking "Change Output Directory" if needed
-3. Click "Load Tracks" to see available subtitle tracks
-4. Select the subtitle tracks you want to extract/convert
-5. Click "Start Extract" to begin the process
-6. Monitor the progress in the application window
-
-## Building from Source
-
-### Prerequisites
-
-- Go 1.18 or later
-- Fyne dependencies: [Fyne Getting Started](https://developer.fyne.io/started/)
-
-### Build Steps
-
-1. Clone the repository
-2. Navigate to the `fyne-gui` directory
-3. Run the build script: `./build.sh`
-
-For cross-compilation, you may need additional tools:
-- For Windows builds on macOS: `brew install mingw-w64`
-- For Linux builds on macOS: `brew install FiloSottile/musl-cross/musl-cross`
-
-## Troubleshooting
-
-- The application automatically checks for required dependencies at startup
-- Missing dependencies will be clearly indicated in the application window
-- Ensure Deno and mkvmerge are in your PATH
-- Check the conversion logs in the output directory
-- For permission issues, try running the application with administrator privileges
+### CLI Version
+To extract subtitles from an MKV file, use the `-x` or `--extract` flag followed by the path to the MKV file:
 
 ## PGS to SRT Conversion Process
 
@@ -167,6 +156,71 @@ The application includes a powerful feature to convert PGS/SUP subtitle files (i
 - Verify that the Tesseract language data files are available
 - For poor OCR quality, you may need to adjust the conversion parameters in the script
 - The application creates detailed logs that can help diagnose conversion issues
+
+## VobSub to SRT Conversion Process
+
+The application also supports converting VobSub subtitles (.idx/.sub files) to SRT format using OCR technology. This feature works similarly to the PGS conversion but uses the vobsub2srt tool.
+
+### How It Works
+
+1. **Extraction**: First, the VobSub subtitles are extracted from the MKV file using `mkvextract` as .idx and .sub files
+
+2. **OCR Processing**: The extracted files are then processed using the vobsub2srt tool that:
+   - Reads the subtitle images from the .sub file and the timing information from the .idx file
+   - Uses Tesseract OCR to convert the subtitle images to text
+   - Automatically handles language detection and mapping
+   - Formats the output as a standard SRT file
+
+3. **Language Support**: The conversion process requires proper language mapping:
+   - MKV files typically use 3-letter language codes (e.g., 'eng', 'fre', 'ger')
+   - The vobsub2srt tool uses 2-letter language codes (e.g., 'en', 'fr', 'de')
+   - The application automatically maps between these formats
+
+### Requirements for VobSub Conversion
+
+- **vobsub2srt**: The command-line tool that performs the actual conversion
+   - Should be installed at `/usr/local/bin/vobsub2srt`
+   - Can be built from [VobSub2SRT GitHub repository](https://github.com/ruediger/VobSub2SRT)
+- **Tesseract OCR**: The underlying OCR engine used for text recognition
+- **Tessdata Files**: Language training data for Tesseract
+
+./gmmmkvsubsextract -x /path/to/yourfile.mkv
+
+### GUI Version
+1. Load an MKV file using one of these methods:
+   - Click "Select MKV File" to choose your MKV file using the file dialog
+   - Or simply drag and drop an MKV file onto the application window
+2. The output directory is automatically set to the same location as your MKV file
+   - You can change it by clicking "Change Output Directory" if needed
+3. Click "Load Tracks" to see available subtitle tracks
+4. Select the subtitle tracks you want to extract/convert
+5. Click "Start Extract" to begin the process
+6. Monitor the progress in the application window
+
+## Building from Source
+
+### Prerequisites
+
+- Go 1.18 or later
+- Fyne dependencies: [Fyne Getting Started](https://developer.fyne.io/started/)
+
+### Build Steps
+
+1. Clone the repository
+2. Navigate to the `fyne-gui` directory
+3. Run the build script: `./build.sh`
+
+For cross-compilation, you may need additional tools:
+- For Windows builds on macOS: `brew install mingw-w64`
+- For Linux builds on macOS: `brew install FiloSottile/musl-cross/musl-cross`
+
+## Troubleshooting
+
+- The application automatically checks for required dependencies at startup
+- Missing dependencies will be clearly indicated in the application window
+- Ensure Deno, mkvmerge, and mkvextract are in your PATH
+- Check the conversion logs in the output directory
+- For permission issues, try running the application with administrator privileges
 
 ## License
 
