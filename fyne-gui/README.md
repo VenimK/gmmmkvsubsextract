@@ -1,4 +1,4 @@
-# Subtitle Forge v1.4.1
+# Subtitle Forge v1.5
 
 A tool for extracting and converting subtitles from MKV files, available in both command-line (CLI) and graphical user interface (GUI) versions.
 
@@ -7,6 +7,12 @@ A tool for extracting and converting subtitles from MKV files, available in both
 This project provides two applications:
 1. **CLI Version** - Command-line tool for extracting subtitles from MKV files
 2. **GUI Version** - Fyne-based graphical application with enhanced features including PGS to SRT conversion
+
+## What's New in v1.5
+
+- **Dependency Auto-Install**: Application now detects missing dependencies and offers to install them automatically
+- **Improved Error Handling**: Better feedback when dependencies are missing or installation fails
+- **Streamlined Setup**: One-click installation of required tools like ffmpeg, mkvtoolnix, and vobsub2srt
 
 ## What's New in v1.4.1
 
@@ -19,6 +25,7 @@ This project provides two applications:
 
 ## What's New in v1.4
 
+- **OCR Language Selection**: Manual language selection for PGS and VobSub subtitle conversion
 - **Improved UI Layout**: Larger window size for better visibility
 - **Enhanced Track Display**: Scrollable track list that can handle any number of subtitle tracks
 - **Better Usability**: Optimized track list area to show more tracks at once
@@ -49,11 +56,9 @@ This project provides two applications:
   - Estimated time remaining calculation
 - Detailed logging for troubleshooting
 - Cross-platform support (macOS, Windows, Linux)
-- Automatic dependency checking at startup
+- Automatic dependency checking at startup with one-click installation
 - Drag-and-drop support for MKV files
 - Automatic output directory setting (defaults to MKV file location)
-- Window size persistence (remembers your preferred size)
-- Keyboard shortcuts for common actions
 - Support button for donations
 - Proper file permissions for extracted subtitle files
 
@@ -186,6 +191,7 @@ The application also supports converting VobSub subtitles (.idx/.sub files) to S
    - MKV files typically use 3-letter language codes (e.g., 'eng', 'fre', 'ger')
    - The vobsub2srt tool uses 2-letter language codes (e.g., 'en', 'fr', 'de')
    - The application automatically maps between these formats
+   - You can manually select the OCR language from a dropdown menu for better accuracy
 
 ### Requirements for VobSub Conversion
 
@@ -225,13 +231,70 @@ For cross-compilation, you may need additional tools:
 - For Windows builds on macOS: `brew install mingw-w64`
 - For Linux builds on macOS: `brew install FiloSottile/musl-cross/musl-cross`
 
+## Dependency Auto-Install
+
+Subtitle Forge v1.5 introduces a new feature that automatically detects missing dependencies and offers to install them for you:
+
+1. **Automatic Detection**: When you start the application, it checks for all required dependencies
+2. **Installation Prompt**: If any dependencies are missing, you'll see a notification with an "Install" button
+3. **One-Click Installation**: Click the button to automatically install the missing dependency
+4. **Progress Tracking**: A progress dialog shows the installation status
+5. **Completion Notification**: You'll be notified when installation is complete
+
+### Supported Dependencies
+
+- **ffmpeg**: For media processing and subtitle conversion
+- **mkvtoolnix** (mkvmerge, mkvextract): For working with MKV files
+- **vobsub2srt**: For converting VobSub subtitles to SRT format
+
+### Requirements
+
+- **Homebrew**: On macOS, dependencies are installed via Homebrew
+- **sudo access**: Some installations may require administrator privileges
+- **cmake**: Required for building vobsub2srt from source
+- **tesseract**: Required for OCR functionality
+
 ## Troubleshooting
 
 - The application automatically checks for required dependencies at startup
-- Missing dependencies will be clearly indicated in the application window
+- Missing dependencies will be clearly indicated in the application window with an option to install them
+- If automatic installation fails, detailed error messages will guide you through manual installation
 - Ensure Deno, mkvmerge, and mkvextract are in your PATH
 - Check the conversion logs in the output directory
 - For permission issues, try running the application with administrator privileges
+
+## Updating the Application
+
+If you've previously cloned the repository and want to update to the latest version, follow these steps:
+
+### Clean Update (Recommended)
+1. Remove any local build artifacts before pulling:
+   ```sh
+   cd gmmmkvsubsextract
+   rm -rf fyne-gui/build/*
+   git pull
+   ```
+
+### If You Encounter Conflicts
+If you see errors like "Your local changes would be overwritten by merge", you can:
+
+1. Stash your local changes:
+   ```sh
+   git stash
+   git pull
+   ```
+   
+2. Or discard local changes to specific files:
+   ```sh
+   git checkout -- fyne-gui/build/
+   git pull
+   ```
+
+3. After updating, rebuild the application:
+   ```sh
+   cd fyne-gui
+   ./build.sh
+   ```
 
 ## License
 
