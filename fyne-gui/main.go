@@ -2,7 +2,9 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -168,6 +170,230 @@ func checkDependencies() map[string]bool {
 	return results
 }
 
+// installDependency handles the installation of a specific dependency
+func installDependency(w fyne.Window, tool string) {
+	// Show a confirmation dialog before proceeding
+	confirmMessage := fmt.Sprintf("This will install %s using Homebrew.\n\nDo you want to continue?", tool)
+	dialog.ShowConfirm(fmt.Sprintf("Install %s", tool), confirmMessage, func(confirmed bool) {
+		if confirmed {
+			// Create a progress dialog
+			progress := dialog.NewProgress(fmt.Sprintf("Installing %s", tool), "Preparing installation...", w)
+			progress.Show()
+			
+			// Run the installation in a goroutine
+			go func() {
+				// Update progress
+				progress.SetValue(0.1)
+				
+				// Prepare the installation command based on the tool
+				var cmd *exec.Cmd
+				var installDesc string
+				
+				// Check if brew is installed first
+				if tool != "vobsub2srt" { // Skip brew check for vobsub2srt as it uses custom script
+					_, err := exec.LookPath("brew")
+					if err != nil {
+						// Hide progress dialog
+						progress.Hide()
+						
+						// Show error about Homebrew not being installed
+						dialog.ShowError(
+							fmt.Errorf("Homebrew is required but not installed. Please install Homebrew first:\n\nhttps://brew.sh"), 
+							w)
+						return
+					}
+				}
+				
+				// Set up command and description based on tool
+				switch tool {
+				case "mkvmerge", "mkvextract":
+					// Install MKVToolNix via Homebrew
+					cmd = exec.Command("brew", "install", "mkvtoolnix")
+					installDesc = "Installing MKVToolNix (provides mkvmerge and mkvextract)"
+				case "deno":
+					// Install Deno via Homebrew
+					cmd = exec.Command("brew", "install", "deno")
+					installDesc = "Installing Deno runtime"
+				case "tesseract":
+					// Install Tesseract via Homebrew
+					cmd = exec.Command("brew", "install", "tesseract")
+					installDesc = "Installing Tesseract OCR engine"
+				case "ffmpeg":
+					// Install ffmpeg via Homebrew
+					cmd = exec.Command("brew", "install", "ffmpeg")
+					installDesc = "Installing FFmpeg multimedia framework"
+				case "vobsub2srt":
+					// Use the custom installation script for VobSub2SRT
+					execPath, err := os.Executable()
+					if err != nil {
+						fmt.Println("[ERROR] Failed to get executable path:", err)
+					}
+					
+					scriptPath := filepath.Join(filepath.Dir(execPath), "install_vobsub2srt.sh")
+					
+					// Check if script exists
+					if _, err := os.Stat(scriptPath); os.IsNotExist(err) {
+						progress.Hide()
+						dialog.ShowError(
+							fmt.Errorf("Installation script not found: %s", scriptPath),
+							w)
+						return
+					}
+					
+					cmd = exec.Command("bash", scriptPath)
+					installDesc = "Installing VobSub2SRT (may require additional dependencies)"
+				default:
+					// Hide the progress dialog
+					progress.Hide()
+					dialog.ShowError(fmt.Errorf("Unknown tool: %s", tool), w)
+					return
+				}
+				
+				// Update progress dialog with specific tool info
+				progress.Hide()
+				progress = dialog.NewProgress("Installing Dependencies", installDesc, w)
+				progress.Show()
+				progress.SetValue(0.3)
+				
+				// Create a buffer to capture output in real-time
+				var outputBuf bytes.Buffer
+				cmd.Stdout = &outputBuf
+				cmd.Stderr = &outputBuf
+				
+				// Start the command
+				err := cmd.Start()
+				if err != nil {
+					progress.Hide()
+					dialog.ShowError(fmt.Errorf("Failed to start installation: %v", err), w)
+					return
+				}
+				
+				// Update progress while command is running
+				progress.SetValue(0.5)
+				
+				// Wait for command to complete
+				err = cmd.Wait()
+				output := outputBuf.Bytes()
+				
+				// Hide the progress dialog
+				progress.Hide()
+				
+				if err != nil {
+					// Show detailed error dialog with output and suggestions
+					errorMsg := fmt.Sprintf("Installation of %s failed.\n\nError: %v\n\n", tool, err)
+					
+					// Add output but limit it to avoid huge dialog
+					outputStr := string(output)
+					if len(outputStr) > 500 {
+						outputStr = outputStr[:500] + "...\n(output truncated)"
+					}
+					errorMsg += "Output:\n" + outputStr + "\n\n"
+					
+					// Add suggestions based on the tool
+					switch tool {
+					case "vobsub2srt":
+						// Get executable path again for suggestion
+						suggestionExecPath, _ := os.Executable()
+						errorMsg += "Suggestions:\n" +
+							"- Make sure cmake is installed (brew install cmake)\n" +
+							"- Make sure tesseract is installed (brew install tesseract)\n" +
+							"- Try running the script manually: bash " + filepath.Join(filepath.Dir(suggestionExecPath), "install_vobsub2srt.sh")
+					default:
+						errorMsg += "Suggestions:\n" +
+							"- Make sure Homebrew is properly installed\n" +
+							"- Try running 'brew doctor' to diagnose Homebrew issues\n" +
+							"- Try installing manually: brew install " + tool
+					}
+					
+					dialog.ShowError(errors.New(errorMsg), w)
+				} else {
+					// Verify installation was successful by checking if tool is now available
+					successful := false
+					
+					// Give the system a moment to register the new installation
+					time.Sleep(500 * time.Millisecond)
+					
+					// Check if tool is now installed
+					dependencyResults := checkDependencies()
+					if installed, ok := dependencyResults[tool]; ok && installed {
+						successful = true
+					}
+					
+					if successful {
+						// Show success dialog
+						dialog.ShowInformation(
+							"Installation Complete", 
+							fmt.Sprintf("%s has been successfully installed.\n\nThe application will now recognize this tool.", tool), 
+							w)
+						
+						// Update dependency status
+						updateDependencyStatus(w)
+					} else {
+						// Installation seemed to succeed but tool still not found
+						dialog.ShowInformation(
+							"Installation Completed", 
+							fmt.Sprintf("The installation process completed, but %s may not be properly installed.\n\nYou may need to restart the application or your computer.", tool), 
+							w)
+					}
+				}
+				// Update the dependency status
+				updateDependencyStatus(w)
+			}()
+		}
+	}, w)
+}
+
+// updateDependencyStatus checks dependencies and updates the UI
+func updateDependencyStatus(w fyne.Window) {
+	// Check dependencies
+	dependencyResults := checkDependencies()
+	
+	// Update the status text
+	dependencyStatus := "System Dependency Check:\n"
+	allDependenciesInstalled := true
+	
+	// Track missing tools
+	missingTools := []string{}
+	
+	for tool, installed := range dependencyResults {
+		status := "✅ Installed"
+		if !installed {
+			status = "❌ Not found"
+			allDependenciesInstalled = false
+			missingTools = append(missingTools, tool)
+		}
+		dependencyStatus += fmt.Sprintf("- %s: %s\n", tool, status)
+	}
+	
+	if !allDependenciesInstalled {
+		dependencyStatus += "\n⚠️ Some required tools are missing. Please install them before using all features.\n"
+	} else {
+		dependencyStatus += "\n✅ All required tools are installed.\n"
+	}
+	
+	// Find and update the dependency result label
+	for _, child := range w.Content().(*fyne.Container).Objects {
+		if tabs, ok := child.(*container.AppTabs); ok {
+			for _, tab := range tabs.Items {
+				if tab.Text == "Settings" {
+					if settingsContainer, ok := tab.Content.(*fyne.Container); ok {
+						for _, settingChild := range settingsContainer.Objects {
+							if vbox, ok := settingChild.(*fyne.Container); ok {
+								for _, vboxChild := range vbox.Objects {
+									if label, ok := vboxChild.(*widget.Label); ok && strings.Contains(label.Text, "System Dependency Check") {
+										label.SetText(dependencyStatus)
+										break
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
 func main() {
 	trackList := container.NewVBox()
 	// Create a scrollable container for the track list
@@ -319,19 +545,11 @@ func main() {
 	dependencyStatus := "System Dependency Check:\n"
 	allDependenciesInstalled := true
 	
-	// Track if vobsub2srt specifically is missing
-	vobsub2srtMissing := false
-	
 	for tool, installed := range dependencyResults {
 		status := "✅ Installed"
 		if !installed {
 			status = "❌ Not found"
 			allDependenciesInstalled = false
-			
-			// Check if vobsub2srt is the missing tool
-			if tool == "vobsub2srt" {
-				vobsub2srtMissing = true
-			}
 		}
 		dependencyStatus += fmt.Sprintf("- %s: %s\n", tool, status)
 	}
@@ -347,76 +565,125 @@ func main() {
 	// Create a container for dependency-related buttons
 	dependencyButtons := container.NewVBox()
 	
-	// Add install button for vobsub2srt if it's missing
-	if vobsub2srtMissing {
-		installButton := widget.NewButton("Install VobSub2SRT", func() {
-			// Show a confirmation dialog before proceeding
-			dialog.ShowConfirm("Install VobSub2SRT", 
-				"This will install VobSub2SRT from the leonard-slass fork.\n\nThe installation requires sudo privileges and will prompt for your password.\n\nDo you want to continue?", 
-				func(confirmed bool) {
-					if confirmed {
-						// Create a progress dialog
-						progress := dialog.NewProgress("Installing VobSub2SRT", "Preparing installation...", w)
-						progress.Show()
-						
-						// Run the installation script in a goroutine
-						go func() {
-							// Get the script path relative to the executable
-							execPath, err := os.Executable()
-							if err != nil {
-								fmt.Println("[ERROR] Failed to get executable path:", err)
-								execPath = "."
-							}
-							execDir := filepath.Dir(execPath)
-							scriptPath := filepath.Join(execDir, "install_vobsub2srt.sh")
+	// Create a container for the install all button
+	installAllContainer := container.NewHBox()
+	
+	// Create a list of missing dependencies
+	missingDependencies := []string{}
+	for tool, installed := range dependencyResults {
+		if !installed {
+			missingDependencies = append(missingDependencies, tool)
+		}
+	}
+	
+	// Add individual install buttons for each missing dependency
+	if len(missingDependencies) > 0 {
+		// Add header for install buttons
+		dependencyButtons.Add(widget.NewLabel("Install Missing Dependencies:"))
+		
+		// Add buttons for each missing dependency
+		for _, tool := range missingDependencies {
+			// Create a local copy of the tool name for the closure
+			toolName := tool
+			
+			// Create button with appropriate label
+			buttonLabel := fmt.Sprintf("Install %s", toolName)
+			installButton := widget.NewButton(buttonLabel, func() {
+				installDependency(w, toolName)
+			})
+			
+			// Add the install button to the dependency buttons container
+			dependencyButtons.Add(installButton)
+		}
+		
+		// Add an "Install All" button if there are multiple missing dependencies
+		if len(missingDependencies) > 1 {
+			installAllButton := widget.NewButton("Install All Missing Dependencies", func() {
+				// Show confirmation dialog
+				dialog.ShowConfirm("Install All Dependencies", 
+					"This will attempt to install all missing dependencies.\n\nSome installations may require sudo privileges.\n\nDo you want to continue?", 
+					func(confirmed bool) {
+						if confirmed {
+							// Create a simple progress dialog
+							progress := dialog.NewProgress("Installing Dependencies", "Installing missing dependencies...", w)
+							progress.Show()
 							
-							// Update progress
-							progress.SetValue(0.1)
-							
-							// Run the installation script
-							cmd := exec.Command("bash", scriptPath)
-							output, err := cmd.CombinedOutput()
-							
-							// Hide the progress dialog
-							progress.Hide()
-							
-							if err != nil {
-								// Show error dialog
-								dialog.ShowError(fmt.Errorf("Installation failed: %v\n\n%s", err, string(output)), w)
-							} else {
-								// Show success dialog
-								dialog.ShowInformation("Installation Complete", "VobSub2SRT has been successfully installed.\n\nPlease restart the application to use the VobSub to SRT conversion feature.", w)
+							// Run installations in a goroutine
+							go func() {
+								totalTools := len(missingDependencies)
+								successCount := 0
+								failureCount := 0
+								
+								// Install each tool
+								for i, tool := range missingDependencies {
+									// Update progress value - increment for each tool
+									progressValue := float64(i) / float64(totalTools)
+									progress.SetValue(progressValue)
+									
+									// Prepare the installation command based on the tool
+									var cmd *exec.Cmd
+									switch tool {
+									case "mkvmerge", "mkvextract":
+										// MKVToolNix includes both mkvmerge and mkvextract
+										cmd = exec.Command("brew", "install", "mkvtoolnix")
+									case "deno":
+										cmd = exec.Command("brew", "install", "deno")
+									case "tesseract":
+										cmd = exec.Command("brew", "install", "tesseract")
+									case "ffmpeg":
+										cmd = exec.Command("brew", "install", "ffmpeg")
+									case "vobsub2srt":
+										// Get the script path relative to the executable
+										execPath, err := os.Executable()
+										if err != nil {
+											fmt.Println("[ERROR] Failed to get executable path:", err)
+											execPath = "."
+										}
+										execDir := filepath.Dir(execPath)
+										scriptPath := filepath.Join(execDir, "install_vobsub2srt.sh")
+										cmd = exec.Command("bash", scriptPath)
+									default:
+										fmt.Printf("[ERROR] Unknown tool: %s\n", tool)
+										failureCount++
+										continue
+									}
+									
+									// Run the installation command
+									_, err := cmd.CombinedOutput()
+									if err != nil {
+										fmt.Printf("[ERROR] Failed to install %s: %v\n", tool, err)
+										failureCount++
+									} else {
+										successCount++
+									}
+								}
+								
+								// Hide the progress dialog
+								progress.Hide()
+								
+								// Show results
+								if failureCount == 0 {
+									dialog.ShowInformation("Installation Complete", 
+										fmt.Sprintf("All %d dependencies have been successfully installed.\n\nPlease restart the application to use all features.", successCount), 
+										w)
+								} else {
+									dialog.ShowInformation("Installation Results", 
+										fmt.Sprintf("%d dependencies installed successfully.\n%d dependencies failed to install.\n\nPlease check the logs for details and try installing the failed dependencies individually.", 
+										successCount, failureCount), 
+										w)
+								}
 								
 								// Update the dependency status
-								dependencyResults = checkDependencies()
-								
-								// Update the status text
-								dependencyStatus := "System Dependency Check:\n"
-								allDependenciesInstalled := true
-								for tool, installed := range dependencyResults {
-									status := "✅ Installed"
-									if !installed {
-										status = "❌ Not found"
-										allDependenciesInstalled = false
-									}
-									dependencyStatus += fmt.Sprintf("- %s: %s\n", tool, status)
-								}
-								
-								if !allDependenciesInstalled {
-									dependencyStatus += "\n⚠️ Some required tools are missing. Please install them before using all features.\n"
-								} else {
-									dependencyStatus += "\n✅ All required tools are installed.\n"
-								}
-								
-								result.SetText(dependencyStatus)
-							}
-						}()
-					}
-				}, w)
-		})
-		
-		// Add the install button to the dependency buttons container
-		dependencyButtons.Add(installButton)
+								updateDependencyStatus(w)
+							}()
+						}
+					}, w)
+			})
+			
+			// Add the install all button to the container
+			installAllContainer.Add(installAllButton)
+			dependencyButtons.Add(installAllContainer)
+		}
 	}
 
 	progress := widget.NewProgressBar()
@@ -1979,7 +2246,7 @@ func main() {
 
 	// Use a more efficient layout with container.NewBorder for better performance
 	// Create app title with version
-	titleLabel := widget.NewLabel("Subtitle Forge v1.4.1")
+	titleLabel := widget.NewLabel("Subtitle Forge v1.5")
 	titleLabel.TextStyle = fyne.TextStyle{Bold: true}
 
 	topContent := container.NewVBox(
