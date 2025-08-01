@@ -168,6 +168,10 @@ func checkDependencies() map[string]bool {
 
 func main() {
 	trackList := container.NewVBox()
+	// Create a scrollable container for the track list
+	trackListScroll := container.NewScroll(trackList)
+	// Set a minimum size for the track list scroll area to show more tracks
+	trackListScroll.SetMinSize(fyne.NewSize(850, 250))
 
 	// Create app with explicit ID and set metadata directly
 	a := app.NewWithID("com.gmm.subtitleforge")
@@ -178,7 +182,7 @@ func main() {
 	// Set app metadata on window
 	w.SetMaster()
 	w.CenterOnScreen()
-	w.Resize(fyne.NewSize(800, 600))
+	w.Resize(fyne.NewSize(900, 700))
 
 	// Check dependencies at startup
 	dependencyResults := checkDependencies()
@@ -1772,7 +1776,7 @@ func main() {
 
 	// Use a more efficient layout with container.NewBorder for better performance
 	// Create app title with version
-	titleLabel := widget.NewLabel("Subtitle Forge v1.3")
+	titleLabel := widget.NewLabel("Subtitle Forge v1.4")
 	titleLabel.TextStyle = fyne.TextStyle{Bold: true}
 
 	topContent := container.NewVBox(
@@ -1788,7 +1792,7 @@ func main() {
 
 	middleContent := container.NewVBox(
 		widget.NewLabel("Subtitle Tracks:"),
-		trackList,
+		trackListScroll,
 	)
 
 	bottomContent := container.NewVBox(
