@@ -20,20 +20,8 @@ else
     exit 1
 fi
 
-# Only build for Windows and Linux if --all flag is provided
-if [ "$BUILD_ALL" = true ]; then
-    # Build for Windows (requires CGO)
-    echo "Building for Windows..."
-    GOOS=windows GOARCH=amd64 CGO_ENABLED=1 CC=x86_64-w64-mingw32-gcc go build -o build/subtitle-forge.exe
-    if [ $? -eq 0 ]; then
-        echo "✅ Windows build successful"
-    else
-        echo "❌ Windows build failed (you may need to install MinGW for cross-compilation)"
-        echo "   Install with: brew install mingw-w64"
-    fi
-else
-    echo "Skipping Windows build (use --all flag to build for all platforms)"
-fi
+# Windows build removed as requested
+echo "Windows build disabled"
 
 # Only build for Linux if --all flag is provided
 if [ "$BUILD_ALL" = true ]; then
@@ -94,37 +82,8 @@ if [ -f "build/subtitle-forge-mac" ]; then
     echo "✅ macOS package created"
 fi
 
-# Create Windows package only if Windows build exists
-if [ -f "build/subtitle-forge.exe" ]; then
-    echo "Creating Windows package..."
-    mkdir -p build/windows
-    cp build/subtitle-forge.exe build/windows/
-    
-    # Copy scripts if they exist
-    if [ -d "../scripts" ]; then
-        cp -r ../scripts build/windows/
-    elif [ -d "scripts" ]; then
-        cp -r scripts build/windows/
-    else
-        echo "Warning: scripts directory not found"
-    fi
-    
-    # Copy README and LICENSE if they exist
-    if [ -n "$README_PATH" ]; then
-        cp "$README_PATH" build/windows/
-    fi
-    
-    if [ -f "../LICENSE" ]; then
-        cp ../LICENSE build/windows/
-    elif [ -f "LICENSE" ]; then
-        cp LICENSE build/windows/
-    else
-        echo "Warning: LICENSE file not found"
-    fi
-    
-    zip -r build/subtitle-forge-windows.zip build/windows
-    echo "✅ Windows package created"
-fi
+# Windows package creation removed as requested
+echo "Windows packaging disabled"
 
 # Create Linux package only if Linux build exists
 if [ -f "build/subtitle-forge-linux" ]; then
