@@ -19,6 +19,7 @@ import (
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
+	"fyne.io/fyne/v2/driver/desktop"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/storage"
 	"fyne.io/fyne/v2/theme"
@@ -183,7 +184,79 @@ func main() {
 	// Set app metadata on window
 	w.SetMaster()
 	w.CenterOnScreen()
-	w.Resize(fyne.NewSize(900, 700))
+	
+	// Setup keyboard shortcuts
+	setupKeyboardShortcuts := func(fileOpenFunc, dirChangeFunc, loadTracksFunc, startExtractFunc func()) {
+		// Ctrl+O for opening files
+		ctrlO := &desktop.CustomShortcut{KeyName: fyne.KeyO, Modifier: fyne.KeyModifierControl}
+		w.Canvas().AddShortcut(ctrlO, func(shortcut fyne.Shortcut) {
+			fileOpenFunc()
+		})
+		
+		// Ctrl+D for changing directory
+		ctrlD := &desktop.CustomShortcut{KeyName: fyne.KeyD, Modifier: fyne.KeyModifierControl}
+		w.Canvas().AddShortcut(ctrlD, func(shortcut fyne.Shortcut) {
+			dirChangeFunc()
+		})
+		
+		// Ctrl+L for loading tracks
+		ctrlL := &desktop.CustomShortcut{KeyName: fyne.KeyL, Modifier: fyne.KeyModifierControl}
+		w.Canvas().AddShortcut(ctrlL, func(shortcut fyne.Shortcut) {
+			loadTracksFunc()
+		})
+		
+		// Ctrl+E for starting extraction
+		ctrlE := &desktop.CustomShortcut{KeyName: fyne.KeyE, Modifier: fyne.KeyModifierControl}
+		w.Canvas().AddShortcut(ctrlE, func(shortcut fyne.Shortcut) {
+			startExtractFunc()
+		})
+	}
+	
+	// Load window size from preferences or use default size
+	defaultWidth := float32(900)
+	defaultHeight := float32(700)
+	width := float32(a.Preferences().Float("window_width"))
+	height := float32(a.Preferences().Float("window_height"))
+	
+	if width == 0 || height == 0 {
+		// Use default size for first launch
+		width = defaultWidth
+		height = defaultHeight
+	}
+	
+	// Resize window to saved or default size
+	w.Resize(fyne.NewSize(width, height))
+	
+	// Save window size when it changes
+	// Use a timer to periodically check and save window size
+	var lastSize fyne.Size
+	go func() {
+		ticker := time.NewTicker(1 * time.Second)
+		defer ticker.Stop()
+		
+		for range ticker.C {
+			fyne.Do(func() {
+				currentSize := w.Canvas().Size()
+				// Only save if size has changed
+				if currentSize.Width != lastSize.Width || currentSize.Height != lastSize.Height {
+					a.Preferences().SetFloat("window_width", float64(currentSize.Width))
+					a.Preferences().SetFloat("window_height", float64(currentSize.Height))
+					lastSize = currentSize
+				}
+			})
+		}
+	}()
+	
+	// Also save window size when closing
+	w.SetCloseIntercept(func() {
+		// Save current window size
+		currentSize := w.Canvas().Size()
+		a.Preferences().SetFloat("window_width", float64(currentSize.Width))
+		a.Preferences().SetFloat("window_height", float64(currentSize.Height))
+		
+		// Close the window
+		w.Close()
+	})
 
 	// Check dependencies at startup
 	dependencyResults := checkDependencies()
@@ -1897,13 +1970,16 @@ func main() {
 
 	// Create button row for better layout
 	buttonRow := container.NewHBox(loadTracksBtn, startExtractBtn, layout.NewSpacer(), supportBtn)
+	
+	// Setup keyboard shortcuts for main actions
+	setupKeyboardShortcuts(fileBtn.OnTapped, dirBtn.OnTapped, loadTracksBtn.OnTapped, startExtractBtn.OnTapped)
 
 	// Use app.NewWithID for better performance and to avoid preferences API warnings
 	// This was already set at the beginning of main()
 
 	// Use a more efficient layout with container.NewBorder for better performance
 	// Create app title with version
-	titleLabel := widget.NewLabel("Subtitle Forge v1.4")
+	titleLabel := widget.NewLabel("Subtitle Forge v1.4.1")
 	titleLabel.TextStyle = fyne.TextStyle{Bold: true}
 
 	topContent := container.NewVBox(

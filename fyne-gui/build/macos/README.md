@@ -1,4 +1,4 @@
-# Subtitle Forge v1.4
+# Subtitle Forge v1.4.1
 
 A tool for extracting and converting subtitles from MKV files, available in both command-line (CLI) and graphical user interface (GUI) versions.
 
@@ -7,6 +7,15 @@ A tool for extracting and converting subtitles from MKV files, available in both
 This project provides two applications:
 1. **CLI Version** - Command-line tool for extracting subtitles from MKV files
 2. **GUI Version** - Fyne-based graphical application with enhanced features including PGS to SRT conversion
+
+## What's New in v1.4.1
+
+- **Window Size Persistence**: Application now remembers and restores your preferred window size
+- **Keyboard Shortcuts**: Added convenient shortcuts for common actions:
+  - **Ctrl+O**: Open MKV file
+  - **Ctrl+D**: Change output directory
+  - **Ctrl+L**: Load tracks
+  - **Ctrl+E**: Start extraction
 
 ## What's New in v1.4
 
@@ -223,6 +232,39 @@ For cross-compilation, you may need additional tools:
 - Ensure Deno, mkvmerge, and mkvextract are in your PATH
 - Check the conversion logs in the output directory
 - For permission issues, try running the application with administrator privileges
+
+## Updating the Application
+
+If you've previously cloned the repository and want to update to the latest version, follow these steps:
+
+### Clean Update (Recommended)
+1. Remove any local build artifacts before pulling:
+   ```sh
+   cd gmmmkvsubsextract
+   rm -rf fyne-gui/build/*
+   git pull
+   ```
+
+### If You Encounter Conflicts
+If you see errors like "Your local changes would be overwritten by merge", you can:
+
+1. Stash your local changes:
+   ```sh
+   git stash
+   git pull
+   ```
+   
+2. Or discard local changes to specific files:
+   ```sh
+   git checkout -- fyne-gui/build/
+   git pull
+   ```
+
+3. After updating, rebuild the application:
+   ```sh
+   cd fyne-gui
+   ./build.sh
+   ```
 
 ## License
 
