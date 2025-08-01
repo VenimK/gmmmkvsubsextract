@@ -25,7 +25,7 @@ go.work
 .env
 
 # Build artifacts
-fyne-gui/build/
+fyne-gui/build/*
 build/
 
 # Binary files
