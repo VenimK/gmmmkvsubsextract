@@ -78,7 +78,14 @@ else
     echo "✅ GCC found: $(command -v gcc)"
 fi
 
-# Create build directory if it doesn't exist
+# Remove existing build directory if it exists
+if [ -d "build" ]; then
+    echo "Removing existing build directory..."
+    rm -rf build
+fi
+
+# Create fresh build directory
+echo "Creating build directory..."
 mkdir -p build
 
 # Build for macOS
