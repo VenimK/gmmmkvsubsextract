@@ -1,4 +1,4 @@
-# Subtitle Forge v1.4.1
+# Subtitle Forge v1.5
 
 A tool for extracting and converting subtitles from MKV files, available in both command-line (CLI) and graphical user interface (GUI) versions.
 
@@ -7,6 +7,12 @@ A tool for extracting and converting subtitles from MKV files, available in both
 This project provides two applications:
 1. **CLI Version** - Command-line tool for extracting subtitles from MKV files
 2. **GUI Version** - Fyne-based graphical application with enhanced features including PGS to SRT conversion
+
+## What's New in v1.5
+
+- **Dependency Auto-Install**: Application now detects missing dependencies and offers to install them automatically
+- **Improved Error Handling**: Better feedback when dependencies are missing or installation fails
+- **Streamlined Setup**: One-click installation of required tools like ffmpeg, mkvtoolnix, and vobsub2srt
 
 ## What's New in v1.4.1
 
@@ -50,7 +56,7 @@ This project provides two applications:
   - Estimated time remaining calculation
 - Detailed logging for troubleshooting
 - Cross-platform support (macOS, Windows, Linux)
-- Automatic dependency checking at startup
+- Automatic dependency checking at startup with one-click installation
 - Drag-and-drop support for MKV files
 - Automatic output directory setting (defaults to MKV file location)
 - Support button for donations
@@ -212,23 +218,80 @@ The application also supports converting VobSub subtitles (.idx/.sub files) to S
 
 ### Prerequisites
 
-- Go 1.18 or later
-- Fyne dependencies: [Fyne Getting Started](https://developer.fyne.io/started/)
+- **Go 1.18 or later** (REQUIRED): You must have Go installed to build from source
+  - Install on macOS: `brew install go` or download from [golang.org](https://golang.org/dl/)
+  - Install on Linux: `apt install golang` (Ubuntu/Debian) or download from [golang.org](https://golang.org/dl/)
+  - Install on Windows: Download and run the installer from [golang.org](https://golang.org/dl/)
+  - Verify installation: `go version` should show the installed version
+- **Fyne dependencies**: Required for GUI compilation
+  - Follow the setup guide at [Fyne Getting Started](https://developer.fyne.io/started/)
+  - macOS: `brew install gcc`
+  - Linux: `apt install gcc libgl1-mesa-dev xorg-dev`
+  - Windows: Install MinGW or MSYS2
 
 ### Build Steps
 
-1. Clone the repository
-2. Navigate to the `fyne-gui` directory
-3. Run the build script: `./build.sh`
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/VenimK/Subtitle-Forge.git
+   ```
+
+2. Navigate to the `fyne-gui` directory:
+   ```bash
+   cd Subtitle-Forge/fyne-gui
+   ```
+
+3. Make the build script executable:
+   ```bash
+   chmod +x build.sh
+   ```
+
+4. Run the build script:
+   ```bash
+   ./build.sh
+   ```
+
+5. Run the compiled application:
+   ```bash
+   # On macOS
+   ./build/subtitle-forge-mac
+   
+   # On Linux
+   ./build/subtitle-forge-linux
+   ```
 
 For cross-compilation, you may need additional tools:
 - For Windows builds on macOS: `brew install mingw-w64`
 - For Linux builds on macOS: `brew install FiloSottile/musl-cross/musl-cross`
 
+## Dependency Auto-Install
+
+Subtitle Forge v1.5 introduces a new feature that automatically detects missing dependencies and offers to install them for you:
+
+1. **Automatic Detection**: When you start the application, it checks for all required dependencies
+2. **Installation Prompt**: If any dependencies are missing, you'll see a notification with an "Install" button
+3. **One-Click Installation**: Click the button to automatically install the missing dependency
+4. **Progress Tracking**: A progress dialog shows the installation status
+5. **Completion Notification**: You'll be notified when installation is complete
+
+### Supported Dependencies
+
+- **ffmpeg**: For media processing and subtitle conversion
+- **mkvtoolnix** (mkvmerge, mkvextract): For working with MKV files
+- **vobsub2srt**: For converting VobSub subtitles to SRT format
+
+### Requirements
+
+- **Homebrew**: On macOS, dependencies are installed via Homebrew
+- **sudo access**: Some installations may require administrator privileges
+- **cmake**: Required for building vobsub2srt from source
+- **tesseract**: Required for OCR functionality
+
 ## Troubleshooting
 
 - The application automatically checks for required dependencies at startup
-- Missing dependencies will be clearly indicated in the application window
+- Missing dependencies will be clearly indicated in the application window with an option to install them
+- If automatic installation fails, detailed error messages will guide you through manual installation
 - Ensure Deno, mkvmerge, and mkvextract are in your PATH
 - Check the conversion logs in the output directory
 - For permission issues, try running the application with administrator privileges
