@@ -218,14 +218,47 @@ The application also supports converting VobSub subtitles (.idx/.sub files) to S
 
 ### Prerequisites
 
-- Go 1.18 or later
-- Fyne dependencies: [Fyne Getting Started](https://developer.fyne.io/started/)
+- **Go 1.18 or later** (REQUIRED): You must have Go installed to build from source
+  - Install on macOS: `brew install go` or download from [golang.org](https://golang.org/dl/)
+  - Install on Linux: `apt install golang` (Ubuntu/Debian) or download from [golang.org](https://golang.org/dl/)
+  - Install on Windows: Download and run the installer from [golang.org](https://golang.org/dl/)
+  - Verify installation: `go version` should show the installed version
+- **Fyne dependencies**: Required for GUI compilation
+  - Follow the setup guide at [Fyne Getting Started](https://developer.fyne.io/started/)
+  - macOS: `brew install gcc`
+  - Linux: `apt install gcc libgl1-mesa-dev xorg-dev`
+  - Windows: Install MinGW or MSYS2
 
 ### Build Steps
 
-1. Clone the repository
-2. Navigate to the `fyne-gui` directory
-3. Run the build script: `./build.sh`
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/VenimK/Subtitle-Forge.git
+   ```
+
+2. Navigate to the `fyne-gui` directory:
+   ```bash
+   cd Subtitle-Forge/fyne-gui
+   ```
+
+3. Make the build script executable:
+   ```bash
+   chmod +x build.sh
+   ```
+
+4. Run the build script:
+   ```bash
+   ./build.sh
+   ```
+
+5. Run the compiled application:
+   ```bash
+   # On macOS
+   ./build/subtitle-forge-mac
+   
+   # On Linux
+   ./build/subtitle-forge-linux
+   ```
 
 For cross-compilation, you may need additional tools:
 - For Windows builds on macOS: `brew install mingw-w64`

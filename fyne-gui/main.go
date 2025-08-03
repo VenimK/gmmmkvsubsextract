@@ -167,6 +167,21 @@ func checkDependencies() map[string]bool {
 	fmt.Println("[DEBUG] Final vobsub2srt found status:", vobsub2srtFound)
 	results["vobsub2srt"] = vobsub2srtFound
 
+	// Check for Go installation
+	fmt.Println("[DEBUG] Checking for Go...")
+	goCmd := exec.Command("go", "version")
+	goOutput, err := goCmd.CombinedOutput()
+	goFound := err == nil && len(goOutput) > 0
+	
+	if goFound {
+		fmt.Println("[DEBUG] Go found:", strings.TrimSpace(string(goOutput)))
+	} else {
+		fmt.Println("[DEBUG] Go not found or error:", err)
+	}
+	
+	fmt.Println("[DEBUG] Final Go found status:", goFound)
+	results["go"] = goFound
+
 	return results
 }
 
@@ -222,6 +237,10 @@ func installDependency(w fyne.Window, tool string) {
 					// Install ffmpeg via Homebrew
 					cmd = exec.Command("brew", "install", "ffmpeg")
 					installDesc = "Installing FFmpeg multimedia framework"
+				case "go":
+					// Install Go via Homebrew
+					cmd = exec.Command("brew", "install", "go")
+					installDesc = "Installing Go programming language"
 				case "vobsub2srt":
 					// Use the custom installation script for VobSub2SRT
 					execPath, err := os.Executable()
