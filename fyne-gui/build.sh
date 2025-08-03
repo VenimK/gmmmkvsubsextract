@@ -7,6 +7,77 @@ if [ "$1" == "--all" ]; then
     BUILD_ALL=true
 fi
 
+# Function to check if a command exists
+check_dependency() {
+    local cmd=$1
+    local name=$2
+    local install_cmd=$3
+    
+    echo "Checking for $name..."
+    if ! command -v $cmd &> /dev/null; then
+        echo "❌ $name not found. It's required to build Subtitle Forge."
+        echo "   Install with: $install_cmd"
+        return 1
+    else
+        echo "✅ $name found: $(command -v $cmd)"
+        return 0
+    fi
+}
+
+# Check for required dependencies
+echo "Checking dependencies..."
+
+# Check for Go
+if ! command -v go &> /dev/null; then
+    echo "❌ Go not found. Attempting to install with Homebrew..."
+    
+    # Check if Homebrew is installed
+    if ! command -v brew &> /dev/null; then
+        echo "❌ Homebrew not found. Please install Homebrew first:"
+        echo "   /bin/bash -c \"$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""
+        exit 1
+    fi
+    
+    # Install Go using Homebrew
+    echo "Installing Go with Homebrew..."
+    brew install go
+    
+    # Verify installation
+    if ! command -v go &> /dev/null; then
+        echo "❌ Failed to install Go. Please install it manually:"
+        echo "   https://golang.org/dl/"
+        exit 1
+    else
+        echo "✅ Go installed successfully: $(command -v go)"
+    fi
+else
+    echo "✅ Go found: $(command -v go)"
+fi
+
+# Check for gcc (required by Fyne)
+if ! command -v gcc &> /dev/null; then
+    echo "❌ GCC not found. Attempting to install with Homebrew..."
+    
+    # Check if Homebrew is installed (should already be checked above, but just in case)
+    if ! command -v brew &> /dev/null; then
+        echo "❌ Homebrew not found. Please install Homebrew first."
+        echo "   Warning: GCC not found. You may encounter issues with Fyne GUI compilation."
+    else
+        # Install GCC using Homebrew
+        echo "Installing GCC with Homebrew..."
+        brew install gcc
+        
+        # Verify installation
+        if ! command -v gcc &> /dev/null; then
+            echo "❌ Failed to install GCC. You may encounter issues with Fyne GUI compilation."
+        else
+            echo "✅ GCC installed successfully: $(command -v gcc)"
+        fi
+    fi
+else
+    echo "✅ GCC found: $(command -v gcc)"
+fi
+
 # Create build directory if it doesn't exist
 mkdir -p build
 
