@@ -2912,6 +2912,9 @@ func main() {
 
 	// Create forced track option
 	forcedTrack := widget.NewCheck("Mark as forced subtitle track", nil)
+	
+	// Create option to remove other subtitle tracks
+	removeOtherTracks := widget.NewCheck("Remove all other subtitle tracks", nil)
 
 	// Create output file name options
 	outputNameEntry := widget.NewEntry()
@@ -2990,10 +2993,21 @@ func main() {
 		// Build mkvmerge command with options
 		mkvmergeArgs := []string{
 			"-o", outputPath,
-			mkvPath,
+		}
+		
+		// If removing other subtitle tracks is checked, use --no-subtitles option
+		if removeOtherTracks.Checked {
+			mkvmergeArgs = append(mkvmergeArgs, "--no-subtitles", mkvPath)
+			insertResultLabel.SetText(insertResultLabel.Text + "\nRemoving all existing subtitle tracks...")
+		} else {
+			mkvmergeArgs = append(mkvmergeArgs, mkvPath)
+		}
+		
+		// Add language and track name options for the SRT file
+		mkvmergeArgs = append(mkvmergeArgs, 
 			"--language", "0:" + lang,
 			"--track-name", "0:" + trackName,
-		}
+		)
 
 		// Add default track option if checked
 		if defaultTrack.Checked {
@@ -3066,6 +3080,7 @@ func main() {
 		),
 		container.NewPadded(defaultTrack),
 		container.NewPadded(forcedTrack),
+		container.NewPadded(removeOtherTracks),
 	))
 
 	// Group output options

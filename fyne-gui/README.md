@@ -13,6 +13,7 @@ This project provides two applications:
 - **Enhanced Drag and Drop**: Improved drag and drop functionality in both Extract and Insert Subtitles tabs
 - **Consistent User Experience**: File dropping now works reliably across all application tabs
 - **Visual Feedback**: Better visual indicators when files are dropped
+- **Subtitle Replacement Option**: New option to remove all existing subtitle tracks when inserting a new subtitle
 
 ## What's New in v1.5
 
